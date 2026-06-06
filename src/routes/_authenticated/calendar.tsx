@@ -114,6 +114,15 @@ function CalendarPage() {
   const eventDates = events.map((e: any) => parseISO(e.event_date));
   const dayEvents = selected ? events.filter((e: any) => isSameDay(parseISO(e.event_date), selected)) : [];
 
+  const filteredEvents = useMemo(() => {
+    if (!search.trim()) return dayEvents;
+    const q = search.toLowerCase();
+    return events.filter((e: any) =>
+      e.title.toLowerCase().includes(q) ||
+      e.subjectsList.some((s: any) => s.name.toLowerCase().includes(q))
+    );
+  }, [events, dayEvents, search]);
+
   const toggleSubject = (id: string) => {
     setSubjectIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   };
