@@ -1,13 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ArrowLeft, FileText, Upload, Type as TypeIcon, ClipboardPaste, FileDown, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ArrowLeft, FileText, Upload, Type as TypeIcon, ClipboardPaste, FileDown, Trash2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -24,6 +25,21 @@ function SubjectDetail() {
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [viewing, setViewing] = useState<any | null>(null);
+  const [viewUrl, setViewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setViewUrl(null);
+    if (viewing?.content_type === "file" && viewing.file_url) {
+      supabase.storage.from("study-materials").createSignedUrl(viewing.file_url, 600).then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) { toast.error(error.message); return; }
+        setViewUrl(data.signedUrl);
+      });
+    }
+    return () => { cancelled = true; };
+  }, [viewing]);
 
   const { data: subject } = useQuery({
     queryKey: ["subject", id],
@@ -149,26 +165,75 @@ function SubjectDetail() {
       ) : (
         <div className="grid sm:grid-cols-2 gap-3">
           {cards.map((c: any) => (
-            <div key={c.id} className="glass-card p-4 group relative">
+            <div
+              key={c.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => setViewing(c)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setViewing(c); } }}
+              className="glass-card p-4 group relative text-left cursor-pointer transition hover:border-primary/40 hover:bg-accent/30 focus:outline-none focus:ring-2 focus:ring-primary/50"
+            >
               <div className="flex items-start gap-2 mb-2">
                 {c.content_type === "file" ? <FileDown className="size-4 text-primary mt-1 shrink-0" /> : <FileText className="size-4 text-primary mt-1 shrink-0" />}
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">{c.title ?? (c.content_type === "file" ? c.file_name : "Anotação")}</p>
                   <p className="text-xs text-muted-foreground">{format(new Date(c.created_at), "d MMM yyyy 'às' HH:mm", { locale: ptBR })}</p>
                 </div>
-                <button onClick={() => { if (confirm("Remover?")) remove.mutate(c.id); }} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive">
+                <button
+                  onClick={(e) => { e.stopPropagation(); if (confirm("Remover?")) remove.mutate(c.id); }}
+                  className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                  aria-label="Remover"
+                >
                   <Trash2 className="size-4" />
                 </button>
               </div>
               {c.content_type === "text" ? (
                 <p className="text-sm text-muted-foreground line-clamp-4 whitespace-pre-wrap">{c.text_content}</p>
               ) : (
-                <button onClick={() => openFile(c.file_url)} className="text-xs text-primary hover:underline">Abrir arquivo</button>
+                <p className="text-xs text-primary">Clique para visualizar</p>
               )}
             </div>
           ))}
         </div>
       )}
+
+      <Dialog open={!!viewing} onOpenChange={(o) => !o && setViewing(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="pr-8">
+              {viewing?.title ?? (viewing?.content_type === "file" ? viewing?.file_name : "Anotação")}
+            </DialogTitle>
+            <DialogDescription>
+              {viewing && format(new Date(viewing.created_at), "d 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-auto flex-1 -mx-6 px-6">
+            {viewing?.content_type === "text" ? (
+              <div className="prose prose-invert max-w-none">
+                <p className="text-base leading-relaxed whitespace-pre-wrap text-foreground">{viewing.text_content}</p>
+              </div>
+            ) : viewing?.content_type === "file" ? (
+              !viewUrl ? (
+                <p className="text-sm text-muted-foreground text-center py-12">Carregando…</p>
+              ) : viewing.file_mime?.startsWith("image/") ? (
+                <img src={viewUrl} alt={viewing.file_name ?? ""} className="w-full h-auto rounded-lg" />
+              ) : viewing.file_mime === "application/pdf" ? (
+                <iframe src={viewUrl} title={viewing.file_name ?? "PDF"} className="w-full h-[70vh] rounded-lg border border-border" />
+              ) : (
+                <div className="text-center py-12 space-y-3">
+                  <p className="text-sm text-muted-foreground">Pré-visualização não disponível para este tipo.</p>
+                  <Button asChild variant="secondary"><a href={viewUrl} target="_blank" rel="noreferrer"><ExternalLink className="size-4 mr-2" />Abrir em nova aba</a></Button>
+                </div>
+              )
+            ) : null}
+          </div>
+          {viewing?.content_type === "file" && viewUrl && (
+            <div className="pt-2 border-t border-border flex justify-end">
+              <Button asChild variant="ghost" size="sm"><a href={viewUrl} target="_blank" rel="noreferrer"><ExternalLink className="size-4 mr-2" />Abrir em nova aba</a></Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
