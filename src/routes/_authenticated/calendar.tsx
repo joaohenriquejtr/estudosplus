@@ -224,17 +224,20 @@ function CalendarPage() {
         </div>
         <div className="glass-card p-5">
           <h3 className="font-semibold mb-3">
-            {selected ? format(selected, "EEEE, d 'de' MMMM", { locale: ptBR }) : "Selecione um dia"}
+            {search.trim() ? "Resultados da busca" : selected ? format(selected, "EEEE, d 'de' MMMM", { locale: ptBR }) : "Selecione um dia"}
           </h3>
-          {dayEvents.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum evento neste dia.</p>
+          {filteredEvents.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {search.trim() ? "Nenhum resultado encontrado." : "Nenhum evento neste dia."}
+            </p>
           ) : (
             <ul className="space-y-2">
-              {dayEvents.map((e: any) => (
+              {filteredEvents.map((e: any) => (
                 <li key={e.id} className="p-3 rounded-lg bg-muted/40 flex items-start gap-3 group">
                   <span className="size-2 rounded-full mt-2 shrink-0" style={{ background: (e.subjectsList[0]?.color as string | undefined) || "var(--primary)" }} />
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm">{e.title}</p>
+                    {search.trim() && <p className="text-[11px] text-muted-foreground mt-0.5">{format(parseISO(e.event_date), "d MMM yyyy", { locale: ptBR })}</p>}
                     <div className="flex flex-wrap gap-1 mt-1">
                       {e.subjectsList.length > 0 ? (
                         e.subjectsList.map((s: any) => (
