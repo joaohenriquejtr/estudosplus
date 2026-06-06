@@ -108,8 +108,8 @@ function SubjectDetail() {
         <ArrowLeft className="size-4" /> Voltar
       </Link>
       <div className="flex items-center gap-3 mb-6">
-        <div className="size-12 rounded-xl flex items-center justify-center" style={{ background: `${subject?.color}33` }}>
-          <FileText className="size-6" style={{ color: subject?.color }} />
+        <div className="size-12 rounded-xl flex items-center justify-center" style={{ background: `${subject?.color ?? "#8b5cf6"}33` }}>
+          <FileText className="size-6" style={{ color: subject?.color ?? "#8b5cf6" }} />
         </div>
         <div>
           <h1 className="text-2xl font-semibold">{subject?.name}</h1>
