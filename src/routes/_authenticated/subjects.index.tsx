@@ -98,9 +98,14 @@ function SubjectsPage() {
           <BookOpen className="size-10 mx-auto text-muted-foreground" />
           <p className="mt-3 text-muted-foreground">Adicione sua primeira matéria para começar.</p>
         </div>
+      ) : filtered.length === 0 ? (
+        <div className="glass-card p-10 text-center">
+          <Search className="size-10 mx-auto text-muted-foreground" />
+          <p className="mt-3 text-muted-foreground">Nenhuma matéria encontrada.</p>
+        </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {subjects.map((s: any) => (
+          {filtered.map((s: any) => (
             <div key={s.id} className="glass-card p-5 group relative hover:border-primary/50 transition">
               <Link to="/subjects/$id" params={{ id: s.id }} className="block">
                 <div className="size-10 rounded-lg flex items-center justify-center mb-3" style={{ background: `${s.color}33` }}>
