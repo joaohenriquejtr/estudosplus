@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
-import { Plus, BookOpen, Trash2 } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Plus, BookOpen, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/subjects/")({
@@ -19,6 +19,7 @@ function SubjectsPage() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [color, setColor] = useState("#8b5cf6");
+  const [search, setSearch] = useState("");
 
   const { data: subjects = [] } = useQuery({
     queryKey: ["subjects"],
@@ -52,9 +53,15 @@ function SubjectsPage() {
     onSuccess: () => { toast.success("Removida"); qc.invalidateQueries({ queryKey: ["subjects"] }); },
   });
 
+  const filtered = useMemo(() => {
+    if (!search.trim()) return subjects;
+    const q = search.toLowerCase();
+    return subjects.filter((s: any) => s.name.toLowerCase().includes(q));
+  }, [subjects, search]);
+
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div>
           <h1 className="text-2xl font-semibold">Matérias</h1>
           <p className="text-sm text-muted-foreground">Suas disciplinas e conteúdos organizados.</p>
@@ -76,14 +83,29 @@ function SubjectsPage() {
         </Dialog>
       </div>
 
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar matéria..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       {subjects.length === 0 ? (
         <div className="glass-card p-10 text-center">
           <BookOpen className="size-10 mx-auto text-muted-foreground" />
           <p className="mt-3 text-muted-foreground">Adicione sua primeira matéria para começar.</p>
         </div>
+      ) : filtered.length === 0 ? (
+        <div className="glass-card p-10 text-center">
+          <Search className="size-10 mx-auto text-muted-foreground" />
+          <p className="mt-3 text-muted-foreground">Nenhuma matéria encontrada.</p>
+        </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {subjects.map((s: any) => (
+          {filtered.map((s: any) => (
             <div key={s.id} className="glass-card p-5 group relative hover:border-primary/50 transition">
               <Link to="/subjects/$id" params={{ id: s.id }} className="block">
                 <div className="size-10 rounded-lg flex items-center justify-center mb-3" style={{ background: `${s.color}33` }}>
