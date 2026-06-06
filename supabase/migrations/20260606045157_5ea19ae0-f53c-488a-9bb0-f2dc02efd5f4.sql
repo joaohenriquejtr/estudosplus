@@ -1,0 +1,1 @@
+CREATE POLICY "own study-materials update" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'study-materials' AND auth.uid()::text = (storage.foldername(name))[1]) WITH CHECK (bucket_id = 'study-materials' AND auth.uid()::text = (storage.foldername(name))[1]);
