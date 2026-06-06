@@ -160,7 +160,7 @@ function CalendarPage() {
                       if (!s) return null;
                       return (
                         <span key={sid} className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs bg-muted/60">
-                          <span className="size-1.5 rounded-full" style={{ background: s.color }} />
+                          <span className="size-1.5 rounded-full" style={{ background: s.color || "var(--primary)" }} />
                           {s.name}
                           <button onClick={() => toggleSubject(sid)} className="ml-0.5 hover:text-destructive"><X className="size-3" /></button>
                         </span>
