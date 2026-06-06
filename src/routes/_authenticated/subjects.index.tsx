@@ -19,6 +19,7 @@ function SubjectsPage() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [color, setColor] = useState("#8b5cf6");
+  const [search, setSearch] = useState("");
 
   const { data: subjects = [] } = useQuery({
     queryKey: ["subjects"],

@@ -31,6 +31,7 @@ function CalendarPage() {
   const [date, setDate] = useState("");
   const [type, setType] = useState("prova");
   const [subjectsOpen, setSubjectsOpen] = useState(false);
+  const [search, setSearch] = useState("");
 
   const { data: subjects = [] } = useQuery({
     queryKey: ["subjects"],
