@@ -14,7 +14,210 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      content_cards: {
+        Row: {
+          content_type: string
+          created_at: string
+          file_mime: string | null
+          file_name: string | null
+          file_url: string | null
+          id: string
+          subject_id: string
+          text_content: string | null
+          title: string | null
+          user_id: string
+        }
+        Insert: {
+          content_type: string
+          created_at?: string
+          file_mime?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          subject_id: string
+          text_content?: string | null
+          title?: string | null
+          user_id: string
+        }
+        Update: {
+          content_type?: string
+          created_at?: string
+          file_mime?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          subject_id?: string
+          text_content?: string | null
+          title?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_cards_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          created_at: string
+          event_date: string
+          event_type: string
+          id: string
+          notes: string | null
+          subject_id: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_date: string
+          event_type?: string
+          id?: string
+          notes?: string | null
+          subject_id?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_date?: string
+          event_type?: string
+          id?: string
+          notes?: string | null
+          subject_id?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_log: {
+        Row: {
+          id: string
+          offset_days: number
+          ref_id: string
+          ref_kind: string
+          sent_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          offset_days: number
+          ref_id: string
+          ref_kind: string
+          sent_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          offset_days?: number
+          ref_id?: string
+          ref_kind?: string
+          sent_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          notification_email: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id: string
+          notification_email?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          notification_email?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      subjects: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tasks: {
+        Row: {
+          created_at: string
+          due_date: string | null
+          id: string
+          priority: string
+          status: string
+          subject_id: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          subject_id?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          subject_id?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
