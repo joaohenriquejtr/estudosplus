@@ -53,9 +53,15 @@ function SubjectsPage() {
     onSuccess: () => { toast.success("Removida"); qc.invalidateQueries({ queryKey: ["subjects"] }); },
   });
 
+  const filtered = useMemo(() => {
+    if (!search.trim()) return subjects;
+    const q = search.toLowerCase();
+    return subjects.filter((s: any) => s.name.toLowerCase().includes(q));
+  }, [subjects, search]);
+
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div>
           <h1 className="text-2xl font-semibold">Matérias</h1>
           <p className="text-sm text-muted-foreground">Suas disciplinas e conteúdos organizados.</p>
@@ -75,6 +81,16 @@ function SubjectsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      </div>
+
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar matéria..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
       </div>
 
       {subjects.length === 0 ? (
