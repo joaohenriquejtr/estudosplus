@@ -25,6 +25,21 @@ function SubjectDetail() {
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [viewing, setViewing] = useState<any | null>(null);
+  const [viewUrl, setViewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setViewUrl(null);
+    if (viewing?.content_type === "file" && viewing.file_url) {
+      supabase.storage.from("study-materials").createSignedUrl(viewing.file_url, 600).then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) { toast.error(error.message); return; }
+        setViewUrl(data.signedUrl);
+      });
+    }
+    return () => { cancelled = true; };
+  }, [viewing]);
 
   const { data: subject } = useQuery({
     queryKey: ["subject", id],
