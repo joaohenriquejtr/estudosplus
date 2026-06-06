@@ -211,7 +211,7 @@ function CalendarPage() {
             <ul className="space-y-2">
               {dayEvents.map((e: any) => (
                 <li key={e.id} className="p-3 rounded-lg bg-muted/40 flex items-start gap-3 group">
-                  <span className="size-2 rounded-full mt-2 shrink-0" style={{ background: e.subjectsList[0]?.color ?? "var(--primary)" }} />
+                  <span className="size-2 rounded-full mt-2 shrink-0" style={{ background: (e.subjectsList[0]?.color as string | undefined) || "var(--primary)" }} />
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm">{e.title}</p>
                     <div className="flex flex-wrap gap-1 mt-1">
