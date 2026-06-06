@@ -129,74 +129,85 @@ function CalendarPage() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Provas & Datas</h1>
-          <p className="text-sm text-muted-foreground">Calendário de provas, trabalhos e apresentações.</p>
-        </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button><Plus className="size-4 mr-2" />Nova data</Button></DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader><DialogTitle>Nova data</DialogTitle></DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2"><Label>Título</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
-              <div className="space-y-2">
-                <Label>Matérias</Label>
-                <Popover open={subjectsOpen} onOpenChange={setSubjectsOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between font-normal">
-                      <span className="truncate">
-                        {subjectIds.length === 0 ? "Selecione as matérias" : `${subjectIds.length} matéria${subjectIds.length > 1 ? "s" : ""} selecionada${subjectIds.length > 1 ? "s" : ""}`}
-                      </span>
-                      <ChevronDown className="size-4 shrink-0 opacity-60" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-2">
-                    <div className="space-y-1 max-h-60 overflow-y-auto">
-                      {subjects.map((s: any) => (
-                        <label key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/50 cursor-pointer text-sm">
-                          <Checkbox checked={subjectIds.includes(s.id)} onCheckedChange={() => toggleSubject(s.id)} />
-                          <span className="flex-1">{s.name}</span>
-                          <span className="size-2.5 rounded-full shrink-0" style={{ background: s.color }} />
-                        </label>
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
-                {subjectIds.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-1">
-                    {subjectIds.map((sid) => {
-                      const s = subjects.find((x: any) => x.id === sid);
-                      if (!s) return null;
-                      return (
-                        <span key={sid} className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs bg-muted/60">
-                          <span className="size-1.5 rounded-full" style={{ background: s.color || "var(--primary)" }} />
-                          {s.name}
-                          <button onClick={() => toggleSubject(sid)} className="ml-0.5 hover:text-destructive"><X className="size-3" /></button>
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">Provas & Datas</h1>
+            <p className="text-sm text-muted-foreground">Calendário de provas, trabalhos e apresentações.</p>
+          </div>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild><Button><Plus className="size-4 mr-2" />Nova data</Button></DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader><DialogTitle>Nova data</DialogTitle></DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2"><Label>Título</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
+                <div className="space-y-2">
+                  <Label>Matérias</Label>
+                  <Popover open={subjectsOpen} onOpenChange={setSubjectsOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-between font-normal">
+                        <span className="truncate">
+                          {subjectIds.length === 0 ? "Selecione as matérias" : `${subjectIds.length} matéria${subjectIds.length > 1 ? "s" : ""} selecionada${subjectIds.length > 1 ? "s" : ""}`}
                         </span>
-                      );
-                    })}
+                        <ChevronDown className="size-4 shrink-0 opacity-60" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-2">
+                      <div className="space-y-1 max-h-60 overflow-y-auto">
+                        {subjects.map((s: any) => (
+                          <label key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/50 cursor-pointer text-sm">
+                            <Checkbox checked={subjectIds.includes(s.id)} onCheckedChange={() => toggleSubject(s.id)} />
+                            <span className="flex-1">{s.name}</span>
+                            <span className="size-2.5 rounded-full shrink-0" style={{ background: s.color }} />
+                          </label>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  {subjectIds.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {subjectIds.map((sid) => {
+                        const s = subjects.find((x: any) => x.id === sid);
+                        if (!s) return null;
+                        return (
+                          <span key={sid} className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs bg-muted/60">
+                            <span className="size-1.5 rounded-full" style={{ background: s.color || "var(--primary)" }} />
+                            {s.name}
+                            <button onClick={() => toggleSubject(sid)} className="ml-0.5 hover:text-destructive"><X className="size-3" /></button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2"><Label>Data</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+                  <div className="space-y-2"><Label>Tipo</Label>
+                    <Select value={type} onValueChange={setType}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="prova">Prova</SelectItem>
+                        <SelectItem value="trabalho">Trabalho</SelectItem>
+                        <SelectItem value="apresentacao">Apresentação</SelectItem>
+                        <SelectItem value="outro">Outro</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                )}
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2"><Label>Data</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
-                <div className="space-y-2"><Label>Tipo</Label>
-                  <Select value={type} onValueChange={setType}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="prova">Prova</SelectItem>
-                      <SelectItem value="trabalho">Trabalho</SelectItem>
-                      <SelectItem value="apresentacao">Apresentação</SelectItem>
-                      <SelectItem value="outro">Outro</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
               </div>
-            </div>
-            <DialogFooter><Button onClick={() => create.mutate()} disabled={!title || !date || create.isPending}>Criar</Button></DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <DialogFooter><Button onClick={() => create.mutate()} disabled={!title || !date || create.isPending}>Criar</Button></DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar prova, trabalho ou matéria..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
       </div>
 
       <div className="grid md:grid-cols-[auto_1fr] gap-6">
