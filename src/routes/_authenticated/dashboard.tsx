@@ -142,10 +142,16 @@ function Dashboard() {
                       <div className="flex flex-wrap gap-1 mt-0.5">
                         {e.subjectsList.length > 0 ? (
                           e.subjectsList.map((s: any) => (
-                            <span key={s.id} className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-muted/60 border">
+                            <Link
+                              key={s.id}
+                              to="/subjects/$id"
+                              params={{ id: s.id }}
+                              onClick={(ev) => ev.stopPropagation()}
+                              className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-muted/60 border hover:bg-primary/15 hover:border-primary/40 hover:text-primary transition"
+                            >
                               <span className="size-1.5 rounded-full" style={{ background: s.color || "var(--primary)" }} />
                               {s.name}
-                            </span>
+                            </Link>
                           ))
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
