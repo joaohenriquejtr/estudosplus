@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, isToday, parseISO, differenceInCalendarDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Sparkles, CalendarClock, ListChecks } from "lucide-react";
+import { Sparkles, CalendarClock, ListChecks, CalendarRange, Clock } from "lucide-react";
 import { useMemo } from "react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
