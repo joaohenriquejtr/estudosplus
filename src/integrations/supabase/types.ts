@@ -14,8 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      chapters: {
+        Row: {
+          created_at: string
+          id: string
+          position: number
+          subject_id: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          position?: number
+          subject_id: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          position?: number
+          subject_id?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chapters_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_cards: {
         Row: {
+          category: string
+          chapter_id: string | null
           content_type: string
           created_at: string
           file_mime: string | null
@@ -28,6 +65,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          category?: string
+          chapter_id?: string | null
           content_type: string
           created_at?: string
           file_mime?: string | null
@@ -40,6 +79,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          category?: string
+          chapter_id?: string | null
           content_type?: string
           created_at?: string
           file_mime?: string | null
@@ -52,6 +93,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "content_cards_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "content_cards_subject_id_fkey"
             columns: ["subject_id"]
@@ -191,6 +239,50 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      schedule_slots: {
+        Row: {
+          created_at: string
+          end_time: string | null
+          id: string
+          notes: string | null
+          start_time: string
+          subject_id: string | null
+          title: string
+          user_id: string
+          weekday: number
+        }
+        Insert: {
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          start_time: string
+          subject_id?: string | null
+          title: string
+          user_id: string
+          weekday: number
+        }
+        Update: {
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          start_time?: string
+          subject_id?: string | null
+          title?: string
+          user_id?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_slots_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subjects: {
         Row: {

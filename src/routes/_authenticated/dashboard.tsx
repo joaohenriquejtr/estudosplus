@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, isToday, parseISO, differenceInCalendarDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Sparkles, CalendarClock, ListChecks } from "lucide-react";
+import { Sparkles, CalendarClock, ListChecks, CalendarRange, Clock } from "lucide-react";
 import { useMemo } from "react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -80,6 +80,21 @@ function Dashboard() {
     }));
   }, [rawEvents, eventSubjects]);
 
+  const todayWeekday = new Date().getDay();
+  const nowTime = new Date().toTimeString().slice(0, 5);
+  const { data: todaySchedule = [] } = useQuery({
+    queryKey: ["schedule-today", todayWeekday],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("schedule_slots")
+        .select("*, subjects(name,color)")
+        .eq("weekday", todayWeekday)
+        .order("start_time");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const motiv = motivacionais[new Date().getDate() % motivacionais.length];
 
   return (
@@ -93,6 +108,38 @@ function Dashboard() {
           <p className="text-lg font-medium mt-1">{motiv}</p>
         </div>
       </div>
+
+      <section className="glass-card p-5">
+        <header className="flex items-center gap-2 mb-4">
+          <CalendarRange className="size-4 text-primary" />
+          <h2 className="font-semibold">Cronograma de hoje</h2>
+          <Link to="/schedule" className="ml-auto text-xs text-primary hover:underline">Ver semana →</Link>
+        </header>
+        {todaySchedule.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Sem horários para hoje. <Link to="/schedule" className="text-primary hover:underline">Configure seu cronograma</Link>.</p>
+        ) : (
+          <ul className="grid sm:grid-cols-2 gap-2">
+            {todaySchedule.map((s: any) => {
+              const ongoing = s.start_time <= nowTime && (!s.end_time || nowTime <= s.end_time);
+              const inner = (
+                <div className={`flex items-center gap-3 p-2.5 rounded-lg transition ${ongoing ? "bg-primary/15 border border-primary/30" : "bg-muted/40 hover:bg-muted/70"}`}>
+                  <span className="size-2 rounded-full shrink-0" style={{ background: s.subjects?.color || "var(--primary)" }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground inline-flex items-center gap-1"><Clock className="size-3" />{s.start_time.slice(0, 5)}{s.end_time ? ` – ${s.end_time.slice(0, 5)}` : ""}{ongoing && <span className="text-primary ml-1">· agora</span>}</p>
+                    <p className="text-sm font-medium truncate">{s.title}</p>
+                  </div>
+                </div>
+              );
+              return (
+                <li key={s.id}>
+                  {s.subject_id ? <Link to="/subjects/$id" params={{ id: s.subject_id }}>{inner}</Link> : inner}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
 
       <div className="grid md:grid-cols-2 gap-6">
         <section className="glass-card p-5">
@@ -142,10 +189,16 @@ function Dashboard() {
                       <div className="flex flex-wrap gap-1 mt-0.5">
                         {e.subjectsList.length > 0 ? (
                           e.subjectsList.map((s: any) => (
-                            <span key={s.id} className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-muted/60 border">
+                            <Link
+                              key={s.id}
+                              to="/subjects/$id"
+                              params={{ id: s.id }}
+                              onClick={(ev) => ev.stopPropagation()}
+                              className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-muted/60 border hover:bg-primary/15 hover:border-primary/40 hover:text-primary transition"
+                            >
                               <span className="size-1.5 rounded-full" style={{ background: s.color || "var(--primary)" }} />
                               {s.name}
-                            </span>
+                            </Link>
                           ))
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
