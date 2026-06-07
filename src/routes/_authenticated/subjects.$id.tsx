@@ -1,14 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ArrowLeft, FileText, Upload, Type as TypeIcon, ClipboardPaste, FileDown, Trash2, ExternalLink } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, FileText, Upload, Type as TypeIcon, ClipboardPaste, FileDown, Trash2, ExternalLink, Plus, BookMarked } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -18,15 +19,27 @@ export const Route = createFileRoute("/_authenticated/subjects/$id")({
   component: SubjectDetail,
 });
 
+const CATEGORIES = [
+  { value: "anotacao", label: "Anotação" },
+  { value: "resumo", label: "Resumo" },
+  { value: "exercicio", label: "Exercício" },
+  { value: "material", label: "Material" },
+];
+
 function SubjectDetail() {
   const { id } = Route.useParams();
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
+  const [category, setCategory] = useState("anotacao");
   const [uploading, setUploading] = useState(false);
   const [viewing, setViewing] = useState<any | null>(null);
   const [viewUrl, setViewUrl] = useState<string | null>(null);
+  const [selectedChapter, setSelectedChapter] = useState<string>("all");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [newChapterOpen, setNewChapterOpen] = useState(false);
+  const [newChapterTitle, setNewChapterTitle] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -50,6 +63,15 @@ function SubjectDetail() {
     },
   });
 
+  const { data: chapters = [] } = useQuery({
+    queryKey: ["chapters", id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("chapters").select("*").eq("subject_id", id).order("position").order("created_at");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: cards = [] } = useQuery({
     queryKey: ["cards", id],
     queryFn: async () => {
@@ -59,12 +81,60 @@ function SubjectDetail() {
     },
   });
 
+  const filteredCards = useMemo(() => {
+    return cards.filter((c: any) => {
+      if (selectedChapter === "all") {
+        // show all
+      } else if (selectedChapter === "none") {
+        if (c.chapter_id) return false;
+      } else if (c.chapter_id !== selectedChapter) return false;
+      if (filterCategory !== "all" && c.category !== filterCategory) return false;
+      return true;
+    });
+  }, [cards, selectedChapter, filterCategory]);
+
+  const targetChapterId = selectedChapter !== "all" && selectedChapter !== "none" ? selectedChapter : null;
+
+  const createChapter = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+      const { data, error } = await supabase.from("chapters").insert({
+        user_id: user.id, subject_id: id, title: newChapterTitle, position: chapters.length,
+      }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (c: any) => {
+      toast.success("Capítulo criado!");
+      qc.invalidateQueries({ queryKey: ["chapters", id] });
+      setNewChapterTitle("");
+      setNewChapterOpen(false);
+      setSelectedChapter(c.id);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const removeChapter = useMutation({
+    mutationFn: async (chId: string) => {
+      const { error } = await supabase.from("chapters").delete().eq("id", chId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Capítulo removido");
+      qc.invalidateQueries({ queryKey: ["chapters", id] });
+      qc.invalidateQueries({ queryKey: ["cards", id] });
+      setSelectedChapter("all");
+    },
+  });
+
   const addText = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
       const { error } = await supabase.from("content_cards").insert({
         user_id: user.id, subject_id: id, title: title || null, content_type: "text", text_content: text,
+        chapter_id: targetChapterId, category,
       });
       if (error) throw error;
     },
@@ -99,6 +169,7 @@ function SubjectDetail() {
       const { error } = await supabase.from("content_cards").insert({
         user_id: user.id, subject_id: id, title: title || file.name, content_type: "file",
         file_url: path, file_name: file.name, file_mime: file.type,
+        chapter_id: targetChapterId, category,
       });
       if (error) throw error;
       toast.success("Arquivo enviado!");
@@ -112,14 +183,13 @@ function SubjectDetail() {
     }
   };
 
-  const openFile = async (path: string) => {
-    const { data, error } = await supabase.storage.from("study-materials").createSignedUrl(path, 600);
-    if (error) return toast.error(error.message);
-    window.open(data.signedUrl, "_blank");
+  const chapterLabel = (chId: string | null) => {
+    if (!chId) return "Geral";
+    return chapters.find((c: any) => c.id === chId)?.title ?? "Capítulo";
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-5xl mx-auto">
       <Link to="/subjects" className="text-sm text-muted-foreground inline-flex items-center gap-1 hover:text-foreground mb-4">
         <ArrowLeft className="size-4" /> Voltar
       </Link>
@@ -129,14 +199,70 @@ function SubjectDetail() {
         </div>
         <div>
           <h1 className="text-2xl font-semibold">{subject?.name}</h1>
-          <p className="text-sm text-muted-foreground">{cards.length} conteúdo(s)</p>
+          <p className="text-sm text-muted-foreground">{cards.length} conteúdo(s) · {chapters.length} capítulo(s)</p>
+        </div>
+      </div>
+
+      {/* Chapters bar */}
+      <div className="glass-card p-4 mb-6">
+        <div className="flex items-center gap-2 mb-3">
+          <BookMarked className="size-4 text-primary" />
+          <h2 className="font-medium">Capítulos</h2>
+          <Dialog open={newChapterOpen} onOpenChange={setNewChapterOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="secondary" className="ml-auto gap-1"><Plus className="size-4" />Novo capítulo</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Novo capítulo</DialogTitle>
+                <DialogDescription>Organize seus conteúdos por capítulo (ex.: Capítulo 8 — Proteínas).</DialogDescription>
+              </DialogHeader>
+              <Input value={newChapterTitle} onChange={(e) => setNewChapterTitle(e.target.value)} placeholder="Capítulo 8 — Proteínas" />
+              <DialogFooter>
+                <Button onClick={() => createChapter.mutate()} disabled={!newChapterTitle.trim() || createChapter.isPending}>Criar</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => setSelectedChapter("all")} className={`text-xs px-3 py-1.5 rounded-full border ${selectedChapter === "all" ? "bg-primary/20 border-primary/40 text-primary" : "bg-muted/40 border-border hover:bg-muted"}`}>Todos</button>
+          <button onClick={() => setSelectedChapter("none")} className={`text-xs px-3 py-1.5 rounded-full border ${selectedChapter === "none" ? "bg-primary/20 border-primary/40 text-primary" : "bg-muted/40 border-border hover:bg-muted"}`}>Sem capítulo</button>
+          {chapters.map((c: any) => (
+            <div key={c.id} className="group inline-flex items-center">
+              <button onClick={() => setSelectedChapter(c.id)} className={`text-xs pl-3 pr-2 py-1.5 rounded-full border inline-flex items-center gap-2 ${selectedChapter === c.id ? "bg-primary/20 border-primary/40 text-primary" : "bg-muted/40 border-border hover:bg-muted"}`}>
+                {c.title}
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); if (confirm(`Remover "${c.title}"? Os conteúdos ficarão sem capítulo.`)) removeChapter.mutate(c.id); }}
+                  className="opacity-60 hover:opacity-100 hover:text-destructive"
+                >
+                  <Trash2 className="size-3" />
+                </span>
+              </button>
+            </div>
+          ))}
         </div>
       </div>
 
       <div className="glass-card p-5 mb-8">
-        <h2 className="font-medium mb-4">Adicionar conteúdo</h2>
+        <h2 className="font-medium mb-1">Adicionar conteúdo</h2>
+        <p className="text-xs text-muted-foreground mb-4">
+          Vai para: <span className="text-foreground">{chapterLabel(targetChapterId)}</span>
+        </p>
         <div className="space-y-3">
-          <div className="space-y-2"><Label>Título (opcional)</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Resumo da aula 3..." /></div>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="space-y-2"><Label>Título (opcional)</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Resumo da aula 3..." /></div>
+            <div className="space-y-2">
+              <Label>Categoria</Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <Tabs defaultValue="type">
             <TabsList className="grid grid-cols-3">
               <TabsTrigger value="type"><TypeIcon className="size-4 mr-2" />Digitar</TabsTrigger>
@@ -159,12 +285,20 @@ function SubjectDetail() {
         </div>
       </div>
 
-      <h2 className="font-medium mb-3">Conteúdos</h2>
-      {cards.length === 0 ? (
+      <div className="flex items-center gap-3 mb-3">
+        <h2 className="font-medium">Conteúdos</h2>
+        <div className="ml-auto flex gap-1 flex-wrap">
+          <button onClick={() => setFilterCategory("all")} className={`text-xs px-2 py-1 rounded-md ${filterCategory === "all" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:bg-muted"}`}>Todos</button>
+          {CATEGORIES.map((c) => (
+            <button key={c.value} onClick={() => setFilterCategory(c.value)} className={`text-xs px-2 py-1 rounded-md ${filterCategory === c.value ? "bg-primary/20 text-primary" : "text-muted-foreground hover:bg-muted"}`}>{c.label}</button>
+          ))}
+        </div>
+      </div>
+      {filteredCards.length === 0 ? (
         <p className="text-sm text-muted-foreground glass-card p-8 text-center">Nada por aqui ainda.</p>
       ) : (
         <div className="grid sm:grid-cols-2 gap-3">
-          {cards.map((c: any) => (
+          {filteredCards.map((c: any) => (
             <div
               key={c.id}
               role="button"
@@ -178,6 +312,10 @@ function SubjectDetail() {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">{c.title ?? (c.content_type === "file" ? c.file_name : "Anotação")}</p>
                   <p className="text-xs text-muted-foreground">{format(new Date(c.created_at), "d MMM yyyy 'às' HH:mm", { locale: ptBR })}</p>
+                  <div className="flex gap-1 mt-1 flex-wrap">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted/60 border">{chapterLabel(c.chapter_id)}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">{CATEGORIES.find((x) => x.value === c.category)?.label ?? c.category}</span>
+                  </div>
                 </div>
                 <button
                   onClick={(e) => { e.stopPropagation(); if (confirm("Remover?")) remove.mutate(c.id); }}
