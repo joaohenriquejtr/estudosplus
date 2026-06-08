@@ -200,6 +200,25 @@ function SubjectDetail() {
     onSuccess: () => { toast.success("Removido"); qc.invalidateQueries({ queryKey: ["cards", id] }); },
   });
 
+  const updateCard = useMutation({
+    mutationFn: async () => {
+      if (!editingCardId) throw new Error("Nenhum conteúdo selecionado");
+      const { error } = await supabase.from("content_cards").update({
+        title: editCardTitle || null,
+        text_content: editCardText || null,
+        category: editCardCategory,
+        chapter_id: editCardChapter,
+      }).eq("id", editingCardId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Conteúdo atualizado!");
+      qc.invalidateQueries({ queryKey: ["cards", id] });
+      setEditingCardId(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const uploadFile = async (file: File) => {
     setUploading(true);
     try {
