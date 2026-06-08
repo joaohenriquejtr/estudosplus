@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useState, useMemo } from "react";
-import { Plus, BookOpen, Trash2, Search } from "lucide-react";
+import { Plus, BookOpen, Trash2, Search, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/subjects/")({
@@ -20,6 +20,11 @@ function SubjectsPage() {
   const [name, setName] = useState("");
   const [color, setColor] = useState("#8b5cf6");
   const [search, setSearch] = useState("");
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editColor, setEditColor] = useState("#8b5cf6");
 
   const { data: subjects = [] } = useQuery({
     queryKey: ["subjects"],
@@ -53,6 +58,21 @@ function SubjectsPage() {
     onSuccess: () => { toast.success("Removida"); qc.invalidateQueries({ queryKey: ["subjects"] }); },
   });
 
+  const update = useMutation({
+    mutationFn: async () => {
+      if (!editingId) throw new Error("Nenhuma matéria selecionada");
+      const { error } = await supabase.from("subjects").update({ name: editName, color: editColor }).eq("id", editingId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Matéria atualizada!");
+      qc.invalidateQueries({ queryKey: ["subjects"] });
+      setEditOpen(false);
+      setEditingId(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const filtered = useMemo(() => {
     if (!search.trim()) return subjects;
     const q = search.toLowerCase();
@@ -82,6 +102,20 @@ function SubjectsPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar matéria</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2"><Label>Nome</Label><Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Matemática" /></div>
+            <div className="space-y-2"><Label>Cor</Label><Input type="color" value={editColor} onChange={(e) => setEditColor(e.target.value)} className="h-10 w-20 p-1" /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => { setEditOpen(false); setEditingId(null); }}>Cancelar</Button>
+            <Button onClick={() => update.mutate()} disabled={!editName || update.isPending}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -114,10 +148,17 @@ function SubjectsPage() {
                 <h3 className="font-medium">{s.name}</h3>
                 <p className="text-xs text-muted-foreground mt-1">Ver conteúdos →</p>
               </Link>
-              <button
-                onClick={() => { if (confirm(`Remover "${s.name}"?`)) remove.mutate(s.id); }}
-                className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition text-muted-foreground hover:text-destructive"
-              ><Trash2 className="size-4" /></button>
+              <div className="absolute top-3 right-3 flex gap-1.5">
+                <button
+                  onClick={() => { setEditingId(s.id); setEditName(s.name); setEditColor(s.color); setEditOpen(true); }}
+                  className="opacity-0 group-hover:opacity-100 transition text-muted-foreground hover:text-primary"
+                  aria-label="Editar"
+                ><Pencil className="size-4" /></button>
+                <button
+                  onClick={() => { if (confirm(`Remover "${s.name}"?`)) remove.mutate(s.id); }}
+                  className="opacity-0 group-hover:opacity-100 transition text-muted-foreground hover:text-destructive"
+                ><Trash2 className="size-4" /></button>
+              </div>
             </div>
           ))}
         </div>

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, FileText, Upload, Type as TypeIcon, ClipboardPaste, FileDown, Trash2, ExternalLink, Plus, BookMarked } from "lucide-react";
+import { ArrowLeft, FileText, Upload, Type as TypeIcon, ClipboardPaste, FileDown, Trash2, ExternalLink, Plus, BookMarked, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -40,6 +40,19 @@ function SubjectDetail() {
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [newChapterOpen, setNewChapterOpen] = useState(false);
   const [newChapterTitle, setNewChapterTitle] = useState("");
+
+  const [editSubjectOpen, setEditSubjectOpen] = useState(false);
+  const [editSubjectName, setEditSubjectName] = useState("");
+  const [editSubjectColor, setEditSubjectColor] = useState("");
+
+  const [editingChapterId, setEditingChapterId] = useState<string | null>(null);
+  const [editChapterTitle, setEditChapterTitle] = useState("");
+
+  const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const [editCardTitle, setEditCardTitle] = useState("");
+  const [editCardText, setEditCardText] = useState("");
+  const [editCardCategory, setEditCardCategory] = useState("anotacao");
+  const [editCardChapter, setEditCardChapter] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -128,6 +141,35 @@ function SubjectDetail() {
     },
   });
 
+  const updateChapter = useMutation({
+    mutationFn: async () => {
+      if (!editingChapterId) throw new Error("Nenhum capítulo selecionado");
+      const { error } = await supabase.from("chapters").update({ title: editChapterTitle }).eq("id", editingChapterId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Capítulo atualizado!");
+      qc.invalidateQueries({ queryKey: ["chapters", id] });
+      setEditingChapterId(null);
+      setEditChapterTitle("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updateSubject = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("subjects").update({ name: editSubjectName, color: editSubjectColor }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Matéria atualizada!");
+      qc.invalidateQueries({ queryKey: ["subject", id] });
+      qc.invalidateQueries({ queryKey: ["subjects"] });
+      setEditSubjectOpen(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const addText = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -156,6 +198,25 @@ function SubjectDetail() {
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Removido"); qc.invalidateQueries({ queryKey: ["cards", id] }); },
+  });
+
+  const updateCard = useMutation({
+    mutationFn: async () => {
+      if (!editingCardId) throw new Error("Nenhum conteúdo selecionado");
+      const { error } = await supabase.from("content_cards").update({
+        title: editCardTitle || null,
+        text_content: editCardText || null,
+        category: editCardCategory,
+        chapter_id: editCardChapter,
+      }).eq("id", editingCardId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Conteúdo atualizado!");
+      qc.invalidateQueries({ queryKey: ["cards", id] });
+      setEditingCardId(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const uploadFile = async (file: File) => {
@@ -197,10 +258,15 @@ function SubjectDetail() {
         <div className="size-12 rounded-xl flex items-center justify-center" style={{ background: `${subject?.color ?? "#8b5cf6"}33` }}>
           <FileText className="size-6" style={{ color: subject?.color ?? "#8b5cf6" }} />
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-semibold">{subject?.name}</h1>
           <p className="text-sm text-muted-foreground">{cards.length} conteúdo(s) · {chapters.length} capítulo(s)</p>
         </div>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => { if (subject) { setEditSubjectName(subject.name); setEditSubjectColor(subject.color || "#8b5cf6"); setEditSubjectOpen(true); } }}
+        ><Pencil className="size-4 mr-2" />Editar matéria</Button>
       </div>
 
       {/* Chapters bar */}
@@ -231,6 +297,14 @@ function SubjectDetail() {
             <div key={c.id} className="group inline-flex items-center">
               <button onClick={() => setSelectedChapter(c.id)} className={`text-xs pl-3 pr-2 py-1.5 rounded-full border inline-flex items-center gap-2 ${selectedChapter === c.id ? "bg-primary/20 border-primary/40 text-primary" : "bg-muted/40 border-border hover:bg-muted"}`}>
                 {c.title}
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); setEditingChapterId(c.id); setEditChapterTitle(c.title); }}
+                  className="opacity-60 hover:opacity-100 hover:text-primary"
+                >
+                  <Pencil className="size-3" />
+                </span>
                 <span
                   role="button"
                   tabIndex={0}
@@ -317,13 +391,22 @@ function SubjectDetail() {
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">{CATEGORIES.find((x) => x.value === c.category)?.label ?? c.category}</span>
                   </div>
                 </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); if (confirm("Remover?")) remove.mutate(c.id); }}
-                  className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                  aria-label="Remover"
-                >
-                  <Trash2 className="size-4" />
-                </button>
+                <div className="flex gap-1.5 shrink-0">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setEditingCardId(c.id); setEditCardTitle(c.title || ""); setEditCardText(c.text_content || ""); setEditCardCategory(c.category || "anotacao"); setEditCardChapter(c.chapter_id); }}
+                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary"
+                    aria-label="Editar"
+                  >
+                    <Pencil className="size-4" />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); if (confirm("Remover?")) remove.mutate(c.id); }}
+                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                    aria-label="Remover"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
               </div>
               {c.content_type === "text" ? (
                 <p className="text-sm text-muted-foreground line-clamp-4 whitespace-pre-wrap">{c.text_content}</p>
@@ -370,6 +453,69 @@ function SubjectDetail() {
               <Button asChild variant="ghost" size="sm"><a href={viewUrl} target="_blank" rel="noreferrer"><ExternalLink className="size-4 mr-2" />Abrir em nova aba</a></Button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Subject Dialog */}
+      <Dialog open={editSubjectOpen} onOpenChange={setEditSubjectOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar matéria</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2"><Label>Nome</Label><Input value={editSubjectName} onChange={(e) => setEditSubjectName(e.target.value)} /></div>
+            <div className="space-y-2"><Label>Cor</Label><Input type="color" value={editSubjectColor} onChange={(e) => setEditSubjectColor(e.target.value)} className="h-10 w-20 p-1" /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setEditSubjectOpen(false)}>Cancelar</Button>
+            <Button onClick={() => updateSubject.mutate()} disabled={!editSubjectName || updateSubject.isPending}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Chapter Dialog */}
+      <Dialog open={!!editingChapterId} onOpenChange={(o) => { if (!o) { setEditingChapterId(null); setEditChapterTitle(""); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar capítulo</DialogTitle></DialogHeader>
+          <div className="space-y-2"><Label>Título</Label><Input value={editChapterTitle} onChange={(e) => setEditChapterTitle(e.target.value)} /></div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => { setEditingChapterId(null); setEditChapterTitle(""); }}>Cancelar</Button>
+            <Button onClick={() => updateChapter.mutate()} disabled={!editChapterTitle.trim() || updateChapter.isPending}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Card Dialog */}
+      <Dialog open={!!editingCardId} onOpenChange={(o) => { if (!o) setEditingCardId(null); }}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader><DialogTitle>Editar conteúdo</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2"><Label>Título</Label><Input value={editCardTitle} onChange={(e) => setEditCardTitle(e.target.value)} placeholder="Título do conteúdo" /></div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Categoria</Label>
+                <Select value={editCardCategory} onValueChange={setEditCardCategory}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Capítulo</Label>
+                <Select value={editCardChapter ?? "none"} onValueChange={(v) => setEditCardChapter(v === "none" ? null : v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Geral (sem capítulo)</SelectItem>
+                    {chapters.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2"><Label>Texto</Label><Textarea value={editCardText} onChange={(e) => setEditCardText(e.target.value)} placeholder="Conteúdo..." rows={6} /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setEditingCardId(null)}>Cancelar</Button>
+            <Button onClick={() => updateCard.mutate()} disabled={updateCard.isPending}>Salvar</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
