@@ -258,10 +258,15 @@ function SubjectDetail() {
         <div className="size-12 rounded-xl flex items-center justify-center" style={{ background: `${subject?.color ?? "#8b5cf6"}33` }}>
           <FileText className="size-6" style={{ color: subject?.color ?? "#8b5cf6" }} />
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-semibold">{subject?.name}</h1>
           <p className="text-sm text-muted-foreground">{cards.length} conteúdo(s) · {chapters.length} capítulo(s)</p>
         </div>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => { if (subject) { setEditSubjectName(subject.name); setEditSubjectColor(subject.color || "#8b5cf6"); setEditSubjectOpen(true); } }}
+        ><Pencil className="size-4 mr-2" />Editar matéria</Button>
       </div>
 
       {/* Chapters bar */}
