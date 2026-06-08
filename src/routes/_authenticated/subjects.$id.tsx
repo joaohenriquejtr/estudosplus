@@ -141,6 +141,35 @@ function SubjectDetail() {
     },
   });
 
+  const updateChapter = useMutation({
+    mutationFn: async () => {
+      if (!editingChapterId) throw new Error("Nenhum capítulo selecionado");
+      const { error } = await supabase.from("chapters").update({ title: editChapterTitle }).eq("id", editingChapterId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Capítulo atualizado!");
+      qc.invalidateQueries({ queryKey: ["chapters", id] });
+      setEditingChapterId(null);
+      setEditChapterTitle("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updateSubject = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("subjects").update({ name: editSubjectName, color: editSubjectColor }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Matéria atualizada!");
+      qc.invalidateQueries({ queryKey: ["subject", id] });
+      qc.invalidateQueries({ queryKey: ["subjects"] });
+      setEditSubjectOpen(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const addText = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
