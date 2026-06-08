@@ -58,6 +58,21 @@ function SubjectsPage() {
     onSuccess: () => { toast.success("Removida"); qc.invalidateQueries({ queryKey: ["subjects"] }); },
   });
 
+  const update = useMutation({
+    mutationFn: async () => {
+      if (!editingId) throw new Error("Nenhuma matéria selecionada");
+      const { error } = await supabase.from("subjects").update({ name: editName, color: editColor }).eq("id", editingId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Matéria atualizada!");
+      qc.invalidateQueries({ queryKey: ["subjects"] });
+      setEditOpen(false);
+      setEditingId(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const filtered = useMemo(() => {
     if (!search.trim()) return subjects;
     const q = search.toLowerCase();
