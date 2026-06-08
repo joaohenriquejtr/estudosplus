@@ -300,6 +300,14 @@ function SubjectDetail() {
                 <span
                   role="button"
                   tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); setEditingChapterId(c.id); setEditChapterTitle(c.title); }}
+                  className="opacity-60 hover:opacity-100 hover:text-primary"
+                >
+                  <Pencil className="size-3" />
+                </span>
+                <span
+                  role="button"
+                  tabIndex={0}
                   onClick={(e) => { e.stopPropagation(); if (confirm(`Remover "${c.title}"? Os conteúdos ficarão sem capítulo.`)) removeChapter.mutate(c.id); }}
                   className="opacity-60 hover:opacity-100 hover:text-destructive"
                 >
