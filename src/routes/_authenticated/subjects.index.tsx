@@ -86,21 +86,22 @@ function SubjectsPage() {
           <h1 className="text-2xl font-semibold">Matérias</h1>
           <p className="text-sm text-muted-foreground">Suas disciplinas e conteúdos organizados.</p>
         </div>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Button><Plus className="size-4 mr-2" />Nova matéria</Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Nova matéria</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2"><Label>Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Matemática" /></div>
-            <div className="space-y-2"><Label>Cor</Label><Input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-10 w-20 p-1" /></div>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => create.mutate()} disabled={!name || create.isPending}>Criar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button><Plus className="size-4 mr-2" />Nova matéria</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Nova matéria</DialogTitle></DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2"><Label>Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Matemática" /></div>
+              <div className="space-y-2"><Label>Cor</Label><Input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-10 w-20 p-1" /></div>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => create.mutate()} disabled={!name || create.isPending}>Criar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
@@ -115,7 +116,6 @@ function SubjectsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      </div>
 
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -148,10 +148,17 @@ function SubjectsPage() {
                 <h3 className="font-medium">{s.name}</h3>
                 <p className="text-xs text-muted-foreground mt-1">Ver conteúdos →</p>
               </Link>
-              <button
-                onClick={() => { if (confirm(`Remover "${s.name}"?`)) remove.mutate(s.id); }}
-                className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition text-muted-foreground hover:text-destructive"
-              ><Trash2 className="size-4" /></button>
+              <div className="absolute top-3 right-3 flex gap-1.5">
+                <button
+                  onClick={() => { setEditingId(s.id); setEditName(s.name); setEditColor(s.color); setEditOpen(true); }}
+                  className="opacity-0 group-hover:opacity-100 transition text-muted-foreground hover:text-primary"
+                  aria-label="Editar"
+                ><Pencil className="size-4" /></button>
+                <button
+                  onClick={() => { if (confirm(`Remover "${s.name}"?`)) remove.mutate(s.id); }}
+                  className="opacity-0 group-hover:opacity-100 transition text-muted-foreground hover:text-destructive"
+                ><Trash2 className="size-4" /></button>
+              </div>
             </div>
           ))}
         </div>
