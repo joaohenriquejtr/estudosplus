@@ -5,9 +5,9 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarRange, Plus, Trash2, Clock } from "lucide-react";
+import { CalendarRange, Plus, Trash2, Clock, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/schedule")({
@@ -25,10 +25,14 @@ const WEEKDAYS = [
   { idx: 0, name: "Domingo" },
 ];
 
+type SlotForm = { weekday: string; start_time: string; end_time: string; subject_id: string; title: string };
+const EMPTY: SlotForm = { weekday: "1", start_time: "08:00", end_time: "", subject_id: "", title: "" };
+
 function SchedulePage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ weekday: "1", start_time: "08:00", end_time: "", subject_id: "", title: "" });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<SlotForm>(EMPTY);
 
   const { data: subjects = [] } = useQuery({
     queryKey: ["subjects"],
@@ -61,27 +65,48 @@ function SchedulePage() {
   const todayIdx = new Date().getDay();
   const nowTime = new Date().toTimeString().slice(0, 5);
 
-  const create = useMutation({
+  const openCreate = (weekday?: number) => {
+    setEditingId(null);
+    setForm({ ...EMPTY, weekday: String(weekday ?? new Date().getDay()) });
+    setOpen(true);
+  };
+  const openEdit = (s: any) => {
+    setEditingId(s.id);
+    setForm({
+      weekday: String(s.weekday),
+      start_time: s.start_time?.slice(0, 5) ?? "08:00",
+      end_time: s.end_time?.slice(0, 5) ?? "",
+      subject_id: s.subject_id ?? "",
+      title: s.title ?? "",
+    });
+    setOpen(true);
+  };
+
+  const save = useMutation({
     mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Não autenticado");
       const subj = subjects.find((s: any) => s.id === form.subject_id);
       const title = form.title.trim() || subj?.name || "Atividade";
-      const { error } = await supabase.from("schedule_slots").insert({
-        user_id: user.id,
+      const payload = {
         weekday: parseInt(form.weekday),
         start_time: form.start_time,
         end_time: form.end_time || null,
         subject_id: form.subject_id || null,
         title,
-      });
-      if (error) throw error;
+      };
+      if (editingId) {
+        const { error } = await supabase.from("schedule_slots").update(payload).eq("id", editingId);
+        if (error) throw error;
+      } else {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Não autenticado");
+        const { error } = await supabase.from("schedule_slots").insert({ ...payload, user_id: user.id });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
-      toast.success("Horário adicionado!");
+      toast.success(editingId ? "Horário atualizado!" : "Horário adicionado!");
       qc.invalidateQueries({ queryKey: ["schedule"] });
-      setOpen(false);
-      setForm({ weekday: form.weekday, start_time: "08:00", end_time: "", subject_id: "", title: "" });
+      setOpen(false); setEditingId(null);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -107,12 +132,12 @@ function SchedulePage() {
           <h1 className="text-2xl font-semibold">Cronograma semanal</h1>
           <p className="text-sm text-muted-foreground">Seus horários fixos. Edite manualmente quando quiser.</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button className="gap-2"><Plus className="size-4" />Adicionar horário</Button></DialogTrigger>
+        <Button className="gap-2" onClick={() => openCreate()}><Plus className="size-4" />Adicionar horário</Button>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditingId(null); }}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Novo horário</DialogTitle>
-              <DialogDescription>Adicione uma aula ou atividade ao seu cronograma fixo.</DialogDescription>
+              <DialogTitle>{editingId ? "Editar horário" : "Novo horário"}</DialogTitle>
+              <DialogDescription>{editingId ? "Atualize a aula ou atividade." : "Adicione uma aula ou atividade ao seu cronograma fixo."}</DialogDescription>
             </DialogHeader>
             <div className="space-y-3">
               <div className="space-y-2">
@@ -141,7 +166,7 @@ function SchedulePage() {
               <div className="space-y-2"><Label>Título (opcional)</Label><Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="Ex.: Revisão de Biologia" /></div>
             </div>
             <DialogFooter>
-              <Button onClick={() => create.mutate()} disabled={!form.start_time || create.isPending}>Salvar</Button>
+              <Button onClick={() => save.mutate()} disabled={!form.start_time || save.isPending}>{editingId ? "Salvar" : "Adicionar"}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -163,7 +188,7 @@ function SchedulePage() {
                 <ul className="space-y-2">
                   {items.map((s: any) => {
                     const ongoing = isToday && s.start_time <= nowTime && (!s.end_time || nowTime <= s.end_time);
-                    const inner = (
+                    const body = (
                       <div className={`flex items-start gap-3 p-2.5 rounded-lg transition ${ongoing ? "bg-primary/15 border border-primary/30" : "bg-muted/40 hover:bg-muted/70"}`}>
                         <span className="size-2 rounded-full mt-2 shrink-0" style={{ background: s.subjects?.color || "var(--primary)" }} />
                         <div className="flex-1 min-w-0">
@@ -177,17 +202,26 @@ function SchedulePage() {
                       </div>
                     );
                     return (
-                      <li key={s.id} className="group relative">
+                      <li key={s.id} className="relative">
                         {s.subject_id ? (
-                          <Link to="/subjects/$id" params={{ id: s.subject_id }}>{inner}</Link>
-                        ) : inner}
-                        <button
-                          onClick={() => { if (confirm("Remover?")) remove.mutate(s.id); }}
-                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                          aria-label="Remover"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </button>
+                          <Link to="/subjects/$id" params={{ id: s.subject_id }}>{body}</Link>
+                        ) : body}
+                        <div className="absolute top-1.5 right-1.5 flex gap-1">
+                          <button
+                            onClick={(e) => { e.preventDefault(); openEdit(s); }}
+                            className="text-muted-foreground hover:text-primary p-1 rounded bg-background/60 backdrop-blur"
+                            aria-label="Editar"
+                          >
+                            <Pencil className="size-3.5" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.preventDefault(); if (confirm("Remover?")) remove.mutate(s.id); }}
+                            className="text-muted-foreground hover:text-destructive p-1 rounded bg-background/60 backdrop-blur"
+                            aria-label="Remover"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        </div>
                       </li>
                     );
                   })}

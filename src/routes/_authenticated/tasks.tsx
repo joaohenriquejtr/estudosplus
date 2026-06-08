@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -20,15 +20,15 @@ export const Route = createFileRoute("/_authenticated/tasks")({
 
 const PRIORITY_LABEL: Record<string, string> = { baixa: "Baixa", media: "Média", alta: "Alta" };
 const PRIORITY_RANK: Record<string, number> = { alta: 3, media: 2, baixa: 1 };
-const STATUS_LABEL: Record<string, string> = { pendente: "Pendente", em_andamento: "Em andamento", concluida: "Concluída" };
+
+type TaskForm = { title: string; subject_id: string; due_date: string; priority: string };
+const EMPTY_FORM: TaskForm = { title: "", subject_id: "", due_date: "", priority: "media" };
 
 function TasksPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [subjectId, setSubjectId] = useState<string>("");
-  const [dueDate, setDueDate] = useState("");
-  const [priority, setPriority] = useState("media");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<TaskForm>(EMPTY_FORM);
   const [filterSubject, setFilterSubject] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
@@ -60,19 +60,35 @@ function TasksPage() {
     return list;
   }, [tasks, filterSubject, filterStatus]);
 
-  const create = useMutation({
+  const openCreate = () => { setEditingId(null); setForm(EMPTY_FORM); setOpen(true); };
+  const openEdit = (t: any) => {
+    setEditingId(t.id);
+    setForm({ title: t.title, subject_id: t.subject_id ?? "", due_date: t.due_date ?? "", priority: t.priority });
+    setOpen(true);
+  };
+
+  const save = useMutation({
     mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Não autenticado");
-      const { error } = await supabase.from("tasks").insert({
-        user_id: user.id, title, subject_id: subjectId || null, due_date: dueDate || null, priority,
-      });
-      if (error) throw error;
+      const payload = {
+        title: form.title,
+        subject_id: form.subject_id || null,
+        due_date: form.due_date || null,
+        priority: form.priority,
+      };
+      if (editingId) {
+        const { error } = await supabase.from("tasks").update(payload).eq("id", editingId);
+        if (error) throw error;
+      } else {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Não autenticado");
+        const { error } = await supabase.from("tasks").insert({ ...payload, user_id: user.id });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
-      toast.success("Tarefa criada!");
+      toast.success(editingId ? "Tarefa atualizada!" : "Tarefa criada!");
       qc.invalidateQueries({ queryKey: ["tasks"] });
-      setTitle(""); setSubjectId(""); setDueDate(""); setPriority("media"); setOpen(false);
+      setOpen(false); setEditingId(null); setForm(EMPTY_FORM);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -97,22 +113,25 @@ function TasksPage() {
           <h1 className="text-2xl font-semibold">Tarefas</h1>
           <p className="text-sm text-muted-foreground">Organize seus afazeres de estudo.</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button><Plus className="size-4 mr-2" />Nova tarefa</Button></DialogTrigger>
+        <Button onClick={openCreate}><Plus className="size-4 mr-2" />Nova tarefa</Button>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditingId(null); setForm(EMPTY_FORM); } }}>
           <DialogContent>
-            <DialogHeader><DialogTitle>Nova tarefa</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{editingId ? "Editar tarefa" : "Nova tarefa"}</DialogTitle></DialogHeader>
             <div className="space-y-4">
-              <div className="space-y-2"><Label>Título</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
+              <div className="space-y-2"><Label>Título</Label><Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} /></div>
               <div className="space-y-2"><Label>Matéria</Label>
-                <Select value={subjectId} onValueChange={setSubjectId}>
+                <Select value={form.subject_id || "none"} onValueChange={(v) => setForm((f) => ({ ...f, subject_id: v === "none" ? "" : v }))}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>{subjects.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhuma</SelectItem>
+                    {subjects.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  </SelectContent>
                 </Select>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2"><Label>Entrega</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
+                <div className="space-y-2"><Label>Entrega</Label><Input type="date" value={form.due_date} onChange={(e) => setForm((f) => ({ ...f, due_date: e.target.value }))} /></div>
                 <div className="space-y-2"><Label>Prioridade</Label>
-                  <Select value={priority} onValueChange={setPriority}>
+                  <Select value={form.priority} onValueChange={(v) => setForm((f) => ({ ...f, priority: v }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="baixa">Baixa</SelectItem>
@@ -123,7 +142,7 @@ function TasksPage() {
                 </div>
               </div>
             </div>
-            <DialogFooter><Button onClick={() => create.mutate()} disabled={!title || create.isPending}>Criar</Button></DialogFooter>
+            <DialogFooter><Button onClick={() => save.mutate()} disabled={!form.title || save.isPending}>{editingId ? "Salvar" : "Criar"}</Button></DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
@@ -152,7 +171,7 @@ function TasksPage() {
         {sorted.map((t: any) => {
           const done = t.status === "concluida";
           return (
-            <div key={t.id} className="p-4 flex items-center gap-3 group">
+            <div key={t.id} className="p-4 flex items-center gap-3">
               <Checkbox
                 checked={done}
                 onCheckedChange={(v) => update.mutate({ id: t.id, patch: { status: v ? "concluida" : "pendente" } })}
@@ -173,7 +192,10 @@ function TasksPage() {
                   <SelectItem value="concluida">Concluída</SelectItem>
                 </SelectContent>
               </Select>
-              <button onClick={() => { if (confirm("Remover?")) remove.mutate(t.id); }} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive">
+              <button onClick={() => openEdit(t)} className="text-muted-foreground hover:text-primary p-1" aria-label="Editar">
+                <Pencil className="size-4" />
+              </button>
+              <button onClick={() => { if (confirm("Remover?")) remove.mutate(t.id); }} className="text-muted-foreground hover:text-destructive p-1" aria-label="Remover">
                 <Trash2 className="size-4" />
               </button>
             </div>

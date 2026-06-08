@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, ChevronDown, X, Search } from "lucide-react";
+import { Plus, Trash2, ChevronDown, X, Search, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { format, isSameDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -22,14 +22,15 @@ export const Route = createFileRoute("/_authenticated/calendar")({
 
 const TYPE_LABEL: Record<string, string> = { prova: "Prova", trabalho: "Trabalho", apresentacao: "Apresentação", outro: "Outro" };
 
+type EventForm = { title: string; subjectIds: string[]; date: string; type: string };
+const EMPTY: EventForm = { title: "", subjectIds: [], date: "", type: "prova" };
+
 function CalendarPage() {
   const qc = useQueryClient();
   const [selected, setSelected] = useState<Date | undefined>(new Date());
   const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [subjectIds, setSubjectIds] = useState<string[]>([]);
-  const [date, setDate] = useState("");
-  const [type, setType] = useState("prova");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<EventForm>(EMPTY);
   const [subjectsOpen, setSubjectsOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -70,29 +71,50 @@ function CalendarPage() {
     }));
   }, [rawEvents, eventSubjects]);
 
-  const create = useMutation({
+  const openCreate = () => { setEditingId(null); setForm(EMPTY); setOpen(true); };
+  const openEdit = (e: any) => {
+    setEditingId(e.id);
+    setForm({
+      title: e.title,
+      subjectIds: e.subjectsList.map((s: any) => s.id),
+      date: e.event_date,
+      type: e.event_type,
+    });
+    setOpen(true);
+  };
+
+  const save = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
-      const { data: eventData, error } = await supabase.from("events").insert({
-        user_id: user.id,
-        title,
-        subject_id: subjectIds[0] || null,
-        event_date: date,
-        event_type: type,
-      }).select("id").single();
-      if (error) throw error;
-      if (subjectIds.length > 0) {
-        const rows = subjectIds.map((sid) => ({ event_id: eventData.id, subject_id: sid, user_id: user.id }));
+      const payload = {
+        title: form.title,
+        subject_id: form.subjectIds[0] || null,
+        event_date: form.date,
+        event_type: form.type,
+      };
+      let eventId = editingId;
+      if (editingId) {
+        const { error } = await supabase.from("events").update(payload).eq("id", editingId);
+        if (error) throw error;
+        const { error: delErr } = await supabase.from("event_subjects").delete().eq("event_id", editingId);
+        if (delErr) throw delErr;
+      } else {
+        const { data: eventData, error } = await supabase.from("events").insert({ ...payload, user_id: user.id }).select("id").single();
+        if (error) throw error;
+        eventId = eventData.id;
+      }
+      if (form.subjectIds.length > 0 && eventId) {
+        const rows = form.subjectIds.map((sid) => ({ event_id: eventId!, subject_id: sid, user_id: user.id }));
         const { error: esError } = await supabase.from("event_subjects").insert(rows);
         if (esError) throw esError;
       }
     },
     onSuccess: () => {
-      toast.success("Data cadastrada!");
+      toast.success(editingId ? "Data atualizada!" : "Data cadastrada!");
       qc.invalidateQueries({ queryKey: ["events"] });
       qc.invalidateQueries({ queryKey: ["event-subjects"] });
-      setTitle(""); setSubjectIds([]); setDate(""); setType("prova"); setOpen(false);
+      setForm(EMPTY); setOpen(false); setEditingId(null);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -124,7 +146,7 @@ function CalendarPage() {
   }, [events, dayEvents, search]);
 
   const toggleSubject = (id: string) => {
-    setSubjectIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+    setForm((f) => ({ ...f, subjectIds: f.subjectIds.includes(id) ? f.subjectIds.filter((x) => x !== id) : [...f.subjectIds, id] }));
   };
 
   return (
@@ -135,19 +157,19 @@ function CalendarPage() {
             <h1 className="text-2xl font-semibold">Provas & Datas</h1>
             <p className="text-sm text-muted-foreground">Calendário de provas, trabalhos e apresentações.</p>
           </div>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button><Plus className="size-4 mr-2" />Nova data</Button></DialogTrigger>
+          <Button onClick={openCreate}><Plus className="size-4 mr-2" />Nova data</Button>
+          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditingId(null); setForm(EMPTY); } }}>
             <DialogContent className="max-w-lg">
-              <DialogHeader><DialogTitle>Nova data</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>{editingId ? "Editar data" : "Nova data"}</DialogTitle></DialogHeader>
               <div className="space-y-4">
-                <div className="space-y-2"><Label>Título</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
+                <div className="space-y-2"><Label>Título</Label><Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} /></div>
                 <div className="space-y-2">
                   <Label>Matérias</Label>
                   <Popover open={subjectsOpen} onOpenChange={setSubjectsOpen}>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="w-full justify-between font-normal">
                         <span className="truncate">
-                          {subjectIds.length === 0 ? "Selecione as matérias" : `${subjectIds.length} matéria${subjectIds.length > 1 ? "s" : ""} selecionada${subjectIds.length > 1 ? "s" : ""}`}
+                          {form.subjectIds.length === 0 ? "Selecione as matérias" : `${form.subjectIds.length} matéria${form.subjectIds.length > 1 ? "s" : ""} selecionada${form.subjectIds.length > 1 ? "s" : ""}`}
                         </span>
                         <ChevronDown className="size-4 shrink-0 opacity-60" />
                       </Button>
@@ -156,7 +178,7 @@ function CalendarPage() {
                       <div className="space-y-1 max-h-60 overflow-y-auto">
                         {subjects.map((s: any) => (
                           <label key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/50 cursor-pointer text-sm">
-                            <Checkbox checked={subjectIds.includes(s.id)} onCheckedChange={() => toggleSubject(s.id)} />
+                            <Checkbox checked={form.subjectIds.includes(s.id)} onCheckedChange={() => toggleSubject(s.id)} />
                             <span className="flex-1">{s.name}</span>
                             <span className="size-2.5 rounded-full shrink-0" style={{ background: s.color }} />
                           </label>
@@ -164,9 +186,9 @@ function CalendarPage() {
                       </div>
                     </PopoverContent>
                   </Popover>
-                  {subjectIds.length > 0 && (
+                  {form.subjectIds.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-1">
-                      {subjectIds.map((sid) => {
+                      {form.subjectIds.map((sid) => {
                         const s = subjects.find((x: any) => x.id === sid);
                         if (!s) return null;
                         return (
@@ -181,9 +203,9 @@ function CalendarPage() {
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2"><Label>Data</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+                  <div className="space-y-2"><Label>Data</Label><Input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} /></div>
                   <div className="space-y-2"><Label>Tipo</Label>
-                    <Select value={type} onValueChange={setType}>
+                    <Select value={form.type} onValueChange={(v) => setForm((f) => ({ ...f, type: v }))}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="prova">Prova</SelectItem>
@@ -195,7 +217,7 @@ function CalendarPage() {
                   </div>
                 </div>
               </div>
-              <DialogFooter><Button onClick={() => create.mutate()} disabled={!title || !date || create.isPending}>Criar</Button></DialogFooter>
+              <DialogFooter><Button onClick={() => save.mutate()} disabled={!form.title || !form.date || save.isPending}>{editingId ? "Salvar" : "Criar"}</Button></DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
@@ -233,7 +255,7 @@ function CalendarPage() {
           ) : (
             <ul className="space-y-2">
               {filteredEvents.map((e: any) => (
-                <li key={e.id} className="p-3 rounded-lg bg-muted/40 flex items-start gap-3 group">
+                <li key={e.id} className="p-3 rounded-lg bg-muted/40 flex items-start gap-3">
                   <span className="size-2 rounded-full mt-2 shrink-0" style={{ background: (e.subjectsList[0]?.color as string | undefined) || "var(--primary)" }} />
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm">{e.title}</p>
@@ -252,9 +274,14 @@ function CalendarPage() {
                       <span className="text-xs text-muted-foreground">· {TYPE_LABEL[e.event_type]}</span>
                     </div>
                   </div>
-                  <button onClick={() => { if (confirm("Remover?")) remove.mutate(e.id); }} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive shrink-0">
-                    <Trash2 className="size-4" />
-                  </button>
+                  <div className="flex gap-1 shrink-0">
+                    <button onClick={() => openEdit(e)} className="text-muted-foreground hover:text-primary p-1" aria-label="Editar">
+                      <Pencil className="size-4" />
+                    </button>
+                    <button onClick={() => { if (confirm("Remover?")) remove.mutate(e.id); }} className="text-muted-foreground hover:text-destructive p-1" aria-label="Remover">
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
