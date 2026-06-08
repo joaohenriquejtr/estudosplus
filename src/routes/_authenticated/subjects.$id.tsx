@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, FileText, Upload, Type as TypeIcon, ClipboardPaste, FileDown, Trash2, ExternalLink, Plus, BookMarked } from "lucide-react";
+import { ArrowLeft, FileText, Upload, Type as TypeIcon, ClipboardPaste, FileDown, Trash2, ExternalLink, Plus, BookMarked, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
