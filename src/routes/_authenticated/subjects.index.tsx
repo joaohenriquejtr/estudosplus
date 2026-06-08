@@ -21,6 +21,11 @@ function SubjectsPage() {
   const [color, setColor] = useState("#8b5cf6");
   const [search, setSearch] = useState("");
 
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editColor, setEditColor] = useState("#8b5cf6");
+
   const { data: subjects = [] } = useQuery({
     queryKey: ["subjects"],
     queryFn: async () => {
