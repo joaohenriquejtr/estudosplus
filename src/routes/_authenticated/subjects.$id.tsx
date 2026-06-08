@@ -455,6 +455,69 @@ function SubjectDetail() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Subject Dialog */}
+      <Dialog open={editSubjectOpen} onOpenChange={setEditSubjectOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar matéria</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2"><Label>Nome</Label><Input value={editSubjectName} onChange={(e) => setEditSubjectName(e.target.value)} /></div>
+            <div className="space-y-2"><Label>Cor</Label><Input type="color" value={editSubjectColor} onChange={(e) => setEditSubjectColor(e.target.value)} className="h-10 w-20 p-1" /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setEditSubjectOpen(false)}>Cancelar</Button>
+            <Button onClick={() => updateSubject.mutate()} disabled={!editSubjectName || updateSubject.isPending}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Chapter Dialog */}
+      <Dialog open={!!editingChapterId} onOpenChange={(o) => { if (!o) { setEditingChapterId(null); setEditChapterTitle(""); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar capítulo</DialogTitle></DialogHeader>
+          <div className="space-y-2"><Label>Título</Label><Input value={editChapterTitle} onChange={(e) => setEditChapterTitle(e.target.value)} /></div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => { setEditingChapterId(null); setEditChapterTitle(""); }}>Cancelar</Button>
+            <Button onClick={() => updateChapter.mutate()} disabled={!editChapterTitle.trim() || updateChapter.isPending}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Card Dialog */}
+      <Dialog open={!!editingCardId} onOpenChange={(o) => { if (!o) setEditingCardId(null); }}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader><DialogTitle>Editar conteúdo</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2"><Label>Título</Label><Input value={editCardTitle} onChange={(e) => setEditCardTitle(e.target.value)} placeholder="Título do conteúdo" /></div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Categoria</Label>
+                <Select value={editCardCategory} onValueChange={setEditCardCategory}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Capítulo</Label>
+                <Select value={editCardChapter ?? "none"} onValueChange={(v) => setEditCardChapter(v === "none" ? null : v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Geral (sem capítulo)</SelectItem>
+                    {chapters.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2"><Label>Texto</Label><Textarea value={editCardText} onChange={(e) => setEditCardText(e.target.value)} placeholder="Conteúdo..." rows={6} /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setEditingCardId(null)}>Cancelar</Button>
+            <Button onClick={() => updateCard.mutate()} disabled={updateCard.isPending}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
