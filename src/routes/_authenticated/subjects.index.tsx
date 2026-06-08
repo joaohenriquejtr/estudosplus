@@ -86,21 +86,35 @@ function SubjectsPage() {
           <h1 className="text-2xl font-semibold">Matérias</h1>
           <p className="text-sm text-muted-foreground">Suas disciplinas e conteúdos organizados.</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="size-4 mr-2" />Nova matéria</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Nova matéria</DialogTitle></DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2"><Label>Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Matemática" /></div>
-              <div className="space-y-2"><Label>Cor</Label><Input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-10 w-20 p-1" /></div>
-            </div>
-            <DialogFooter>
-              <Button onClick={() => create.mutate()} disabled={!name || create.isPending}>Criar</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button><Plus className="size-4 mr-2" />Nova matéria</Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Nova matéria</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2"><Label>Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Matemática" /></div>
+            <div className="space-y-2"><Label>Cor</Label><Input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-10 w-20 p-1" /></div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => create.mutate()} disabled={!name || create.isPending}>Criar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar matéria</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2"><Label>Nome</Label><Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Matemática" /></div>
+            <div className="space-y-2"><Label>Cor</Label><Input type="color" value={editColor} onChange={(e) => setEditColor(e.target.value)} className="h-10 w-20 p-1" /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => { setEditOpen(false); setEditingId(null); }}>Cancelar</Button>
+            <Button onClick={() => update.mutate()} disabled={!editName || update.isPending}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       </div>
 
       <div className="relative mb-4">
