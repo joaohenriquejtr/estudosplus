@@ -41,6 +41,19 @@ function SubjectDetail() {
   const [newChapterOpen, setNewChapterOpen] = useState(false);
   const [newChapterTitle, setNewChapterTitle] = useState("");
 
+  const [editSubjectOpen, setEditSubjectOpen] = useState(false);
+  const [editSubjectName, setEditSubjectName] = useState("");
+  const [editSubjectColor, setEditSubjectColor] = useState("");
+
+  const [editingChapterId, setEditingChapterId] = useState<string | null>(null);
+  const [editChapterTitle, setEditChapterTitle] = useState("");
+
+  const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const [editCardTitle, setEditCardTitle] = useState("");
+  const [editCardText, setEditCardText] = useState("");
+  const [editCardCategory, setEditCardCategory] = useState("anotacao");
+  const [editCardChapter, setEditCardChapter] = useState<string | null>(null);
+
   useEffect(() => {
     let cancelled = false;
     setViewUrl(null);
