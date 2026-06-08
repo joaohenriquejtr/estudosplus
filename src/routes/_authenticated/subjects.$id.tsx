@@ -391,13 +391,22 @@ function SubjectDetail() {
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">{CATEGORIES.find((x) => x.value === c.category)?.label ?? c.category}</span>
                   </div>
                 </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); if (confirm("Remover?")) remove.mutate(c.id); }}
-                  className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                  aria-label="Remover"
-                >
-                  <Trash2 className="size-4" />
-                </button>
+                <div className="flex gap-1.5 shrink-0">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setEditingCardId(c.id); setEditCardTitle(c.title || ""); setEditCardText(c.text_content || ""); setEditCardCategory(c.category || "anotacao"); setEditCardChapter(c.chapter_id); }}
+                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary"
+                    aria-label="Editar"
+                  >
+                    <Pencil className="size-4" />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); if (confirm("Remover?")) remove.mutate(c.id); }}
+                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                    aria-label="Remover"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
               </div>
               {c.content_type === "text" ? (
                 <p className="text-sm text-muted-foreground line-clamp-4 whitespace-pre-wrap">{c.text_content}</p>
