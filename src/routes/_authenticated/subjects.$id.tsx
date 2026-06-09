@@ -190,7 +190,36 @@ function SubjectDetail() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const remove = useMutation({
+  const detectKind = (url: string): "youtube" | "drive" | "generic" => {
+    const u = url.toLowerCase();
+    if (u.includes("youtube.com") || u.includes("youtu.be")) return "youtube";
+    if (u.includes("drive.google.com") || u.includes("docs.google.com")) return "drive";
+    return "generic";
+  };
+
+  const addLink = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+      let url = linkUrl.trim();
+      if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+      try { new URL(url); } catch { throw new Error("Link inválido"); }
+      const kind = linkKind === "generic" ? detectKind(url) : linkKind;
+      const { error } = await supabase.from("content_cards").insert({
+        user_id: user.id, subject_id: id, title: title || url, content_type: "link",
+        text_content: url, file_mime: kind, chapter_id: targetChapterId, category,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Link adicionado!");
+      qc.invalidateQueries({ queryKey: ["cards", id] });
+      setTitle(""); setLinkUrl("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+
     mutationFn: async (cardId: string) => {
       const card = cards.find((c: any) => c.id === cardId);
       if (card?.file_url) {
