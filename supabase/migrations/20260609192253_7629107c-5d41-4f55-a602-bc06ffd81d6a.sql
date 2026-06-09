@@ -1,0 +1,2 @@
+ALTER TABLE public.content_cards DROP CONSTRAINT content_cards_content_type_check;
+ALTER TABLE public.content_cards ADD CONSTRAINT content_cards_content_type_check CHECK (content_type IN ('text','file','link'));
