@@ -219,7 +219,7 @@ function SubjectDetail() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-
+  const remove = useMutation({
     mutationFn: async (cardId: string) => {
       const card = cards.find((c: any) => c.id === cardId);
       if (card?.file_url) {
