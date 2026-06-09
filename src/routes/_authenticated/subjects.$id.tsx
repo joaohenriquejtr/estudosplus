@@ -505,8 +505,34 @@ function SubjectDetail() {
                   <Button asChild variant="secondary"><a href={viewUrl} target="_blank" rel="noreferrer"><ExternalLink className="size-4 mr-2" />Abrir em nova aba</a></Button>
                 </div>
               )
+            ) : viewing?.content_type === "link" ? (
+              (() => {
+                const url: string = viewing.text_content ?? "";
+                const kind = viewing.file_mime;
+                let embed: string | null = null;
+                if (kind === "youtube") {
+                  const m = url.match(/(?:youtu\.be\/|v=|shorts\/|embed\/)([\w-]{11})/);
+                  if (m) embed = `https://www.youtube.com/embed/${m[1]}`;
+                } else if (kind === "drive") {
+                  const m = url.match(/\/d\/([\w-]+)/);
+                  if (m) embed = `https://drive.google.com/file/d/${m[1]}/preview`;
+                }
+                return embed ? (
+                  <iframe src={embed} title={viewing.title ?? "Link"} className="w-full h-[70vh] rounded-lg border border-border" allow="autoplay; fullscreen" />
+                ) : (
+                  <div className="text-center py-12 space-y-3">
+                    <p className="text-sm text-muted-foreground break-all">{url}</p>
+                    <Button asChild variant="secondary"><a href={url} target="_blank" rel="noreferrer"><ExternalLink className="size-4 mr-2" />Abrir link</a></Button>
+                  </div>
+                );
+              })()
             ) : null}
           </div>
+          {viewing?.content_type === "link" && viewing.text_content && (
+            <div className="pt-2 border-t border-border flex justify-end">
+              <Button asChild variant="ghost" size="sm"><a href={viewing.text_content} target="_blank" rel="noreferrer"><ExternalLink className="size-4 mr-2" />Abrir em nova aba</a></Button>
+            </div>
+          )}
           {viewing?.content_type === "file" && viewUrl && (
             <div className="pt-2 border-t border-border flex justify-end">
               <Button asChild variant="ghost" size="sm"><a href={viewUrl} target="_blank" rel="noreferrer"><ExternalLink className="size-4 mr-2" />Abrir em nova aba</a></Button>
