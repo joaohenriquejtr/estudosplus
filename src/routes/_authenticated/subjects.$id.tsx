@@ -467,6 +467,8 @@ function SubjectDetail() {
               </div>
               {c.content_type === "text" ? (
                 <p className="text-sm text-muted-foreground line-clamp-4 whitespace-pre-wrap">{c.text_content}</p>
+              ) : c.content_type === "link" ? (
+                <p className="text-xs text-primary truncate">{c.text_content}</p>
               ) : (
                 <p className="text-xs text-primary">Clique para visualizar</p>
               )}
