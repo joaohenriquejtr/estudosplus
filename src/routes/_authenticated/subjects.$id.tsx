@@ -34,6 +34,8 @@ function SubjectDetail() {
   const [text, setText] = useState("");
   const [category, setCategory] = useState("anotacao");
   const [uploading, setUploading] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkKind, setLinkKind] = useState<"youtube" | "drive" | "generic">("generic");
   const [viewing, setViewing] = useState<any | null>(null);
   const [viewUrl, setViewUrl] = useState<string | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<string>("all");
