@@ -369,9 +369,10 @@ function SubjectDetail() {
             </div>
           </div>
           <Tabs defaultValue="type">
-            <TabsList className="grid grid-cols-3">
+            <TabsList className="grid grid-cols-4">
               <TabsTrigger value="type"><TypeIcon className="size-4 mr-2" />Digitar</TabsTrigger>
               <TabsTrigger value="paste"><ClipboardPaste className="size-4 mr-2" />Colar</TabsTrigger>
+              <TabsTrigger value="link"><Link2 className="size-4 mr-2" />Link</TabsTrigger>
               <TabsTrigger value="upload"><Upload className="size-4 mr-2" />Upload</TabsTrigger>
             </TabsList>
             <TabsContent value="type" className="space-y-3 pt-3">
@@ -382,9 +383,30 @@ function SubjectDetail() {
               <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Cole o conteúdo aqui (Ctrl+V)..." rows={6} />
               <Button onClick={() => addText.mutate()} disabled={!text || addText.isPending}>Salvar conteúdo</Button>
             </TabsContent>
+            <TabsContent value="link" className="space-y-3 pt-3">
+              <div className="grid sm:grid-cols-[1fr_180px] gap-3">
+                <div className="space-y-2">
+                  <Label>URL</Label>
+                  <Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://youtube.com/... ou drive.google.com/..." />
+                </div>
+                <div className="space-y-2">
+                  <Label>Tipo</Label>
+                  <Select value={linkKind} onValueChange={(v) => setLinkKind(v as any)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="generic">Detectar / Outro</SelectItem>
+                      <SelectItem value="youtube">Vídeo (YouTube)</SelectItem>
+                      <SelectItem value="drive">Google Drive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button onClick={() => addLink.mutate()} disabled={!linkUrl.trim() || addLink.isPending}>Salvar link</Button>
+              <p className="text-xs text-muted-foreground">Cole links do YouTube, Google Drive, artigos ou qualquer página.</p>
+            </TabsContent>
             <TabsContent value="upload" className="space-y-3 pt-3">
-              <Input ref={fileRef} type="file" accept="image/*,application/pdf" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile(f); }} disabled={uploading} />
-              <p className="text-xs text-muted-foreground">Aceita imagens e PDFs.</p>
+              <Input ref={fileRef} type="file" accept="image/*,application/pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.zip,.rar,audio/*,video/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile(f); }} disabled={uploading} />
+              <p className="text-xs text-muted-foreground">Aceita prints, PDFs, documentos (Word, PowerPoint, Excel), áudios e vídeos.</p>
             </TabsContent>
           </Tabs>
         </div>
