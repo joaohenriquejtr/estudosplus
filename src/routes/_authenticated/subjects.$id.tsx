@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, FileText, Upload, Type as TypeIcon, ClipboardPaste, FileDown, Trash2, ExternalLink, Plus, BookMarked, Pencil } from "lucide-react";
+import { ArrowLeft, FileText, Upload, Type as TypeIcon, ClipboardPaste, FileDown, Trash2, ExternalLink, Plus, BookMarked, Pencil, Link2, Youtube, HardDrive, Image as ImageIcon, FileType2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -34,6 +34,8 @@ function SubjectDetail() {
   const [text, setText] = useState("");
   const [category, setCategory] = useState("anotacao");
   const [uploading, setUploading] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkKind, setLinkKind] = useState<"youtube" | "drive" | "generic">("generic");
   const [viewing, setViewing] = useState<any | null>(null);
   const [viewUrl, setViewUrl] = useState<string | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<string>("all");
@@ -188,6 +190,35 @@ function SubjectDetail() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const detectKind = (url: string): "youtube" | "drive" | "generic" => {
+    const u = url.toLowerCase();
+    if (u.includes("youtube.com") || u.includes("youtu.be")) return "youtube";
+    if (u.includes("drive.google.com") || u.includes("docs.google.com")) return "drive";
+    return "generic";
+  };
+
+  const addLink = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+      let url = linkUrl.trim();
+      if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+      try { new URL(url); } catch { throw new Error("Link inválido"); }
+      const kind = linkKind === "generic" ? detectKind(url) : linkKind;
+      const { error } = await supabase.from("content_cards").insert({
+        user_id: user.id, subject_id: id, title: title || url, content_type: "link",
+        text_content: url, file_mime: kind, chapter_id: targetChapterId, category,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Link adicionado!");
+      qc.invalidateQueries({ queryKey: ["cards", id] });
+      setTitle(""); setLinkUrl("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const remove = useMutation({
     mutationFn: async (cardId: string) => {
       const card = cards.find((c: any) => c.id === cardId);
@@ -338,9 +369,10 @@ function SubjectDetail() {
             </div>
           </div>
           <Tabs defaultValue="type">
-            <TabsList className="grid grid-cols-3">
+            <TabsList className="grid grid-cols-4">
               <TabsTrigger value="type"><TypeIcon className="size-4 mr-2" />Digitar</TabsTrigger>
               <TabsTrigger value="paste"><ClipboardPaste className="size-4 mr-2" />Colar</TabsTrigger>
+              <TabsTrigger value="link"><Link2 className="size-4 mr-2" />Link</TabsTrigger>
               <TabsTrigger value="upload"><Upload className="size-4 mr-2" />Upload</TabsTrigger>
             </TabsList>
             <TabsContent value="type" className="space-y-3 pt-3">
@@ -351,9 +383,30 @@ function SubjectDetail() {
               <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Cole o conteúdo aqui (Ctrl+V)..." rows={6} />
               <Button onClick={() => addText.mutate()} disabled={!text || addText.isPending}>Salvar conteúdo</Button>
             </TabsContent>
+            <TabsContent value="link" className="space-y-3 pt-3">
+              <div className="grid sm:grid-cols-[1fr_180px] gap-3">
+                <div className="space-y-2">
+                  <Label>URL</Label>
+                  <Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://youtube.com/... ou drive.google.com/..." />
+                </div>
+                <div className="space-y-2">
+                  <Label>Tipo</Label>
+                  <Select value={linkKind} onValueChange={(v) => setLinkKind(v as any)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="generic">Detectar / Outro</SelectItem>
+                      <SelectItem value="youtube">Vídeo (YouTube)</SelectItem>
+                      <SelectItem value="drive">Google Drive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button onClick={() => addLink.mutate()} disabled={!linkUrl.trim() || addLink.isPending}>Salvar link</Button>
+              <p className="text-xs text-muted-foreground">Cole links do YouTube, Google Drive, artigos ou qualquer página.</p>
+            </TabsContent>
             <TabsContent value="upload" className="space-y-3 pt-3">
-              <Input ref={fileRef} type="file" accept="image/*,application/pdf" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile(f); }} disabled={uploading} />
-              <p className="text-xs text-muted-foreground">Aceita imagens e PDFs.</p>
+              <Input ref={fileRef} type="file" accept="image/*,application/pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.zip,.rar,audio/*,video/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile(f); }} disabled={uploading} />
+              <p className="text-xs text-muted-foreground">Aceita prints, PDFs, documentos (Word, PowerPoint, Excel), áudios e vídeos.</p>
             </TabsContent>
           </Tabs>
         </div>
@@ -382,7 +435,11 @@ function SubjectDetail() {
               className="glass-card p-4 group relative text-left cursor-pointer transition hover:border-primary/40 hover:bg-accent/30 focus:outline-none focus:ring-2 focus:ring-primary/50"
             >
               <div className="flex items-start gap-2 mb-2">
-                {c.content_type === "file" ? <FileDown className="size-4 text-primary mt-1 shrink-0" /> : <FileText className="size-4 text-primary mt-1 shrink-0" />}
+                {c.content_type === "link"
+                  ? (c.file_mime === "youtube" ? <Youtube className="size-4 text-primary mt-1 shrink-0" /> : c.file_mime === "drive" ? <HardDrive className="size-4 text-primary mt-1 shrink-0" /> : <Link2 className="size-4 text-primary mt-1 shrink-0" />)
+                  : c.content_type === "file"
+                  ? (c.file_mime?.startsWith("image/") ? <ImageIcon className="size-4 text-primary mt-1 shrink-0" /> : c.file_mime === "application/pdf" ? <FileType2 className="size-4 text-primary mt-1 shrink-0" /> : <FileDown className="size-4 text-primary mt-1 shrink-0" />)
+                  : <FileText className="size-4 text-primary mt-1 shrink-0" />}
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">{c.title ?? (c.content_type === "file" ? c.file_name : "Anotação")}</p>
                   <p className="text-xs text-muted-foreground">{format(new Date(c.created_at), "d MMM yyyy 'às' HH:mm", { locale: ptBR })}</p>
@@ -410,6 +467,8 @@ function SubjectDetail() {
               </div>
               {c.content_type === "text" ? (
                 <p className="text-sm text-muted-foreground line-clamp-4 whitespace-pre-wrap">{c.text_content}</p>
+              ) : c.content_type === "link" ? (
+                <p className="text-xs text-primary truncate">{c.text_content}</p>
               ) : (
                 <p className="text-xs text-primary">Clique para visualizar</p>
               )}
@@ -446,8 +505,34 @@ function SubjectDetail() {
                   <Button asChild variant="secondary"><a href={viewUrl} target="_blank" rel="noreferrer"><ExternalLink className="size-4 mr-2" />Abrir em nova aba</a></Button>
                 </div>
               )
+            ) : viewing?.content_type === "link" ? (
+              (() => {
+                const url: string = viewing.text_content ?? "";
+                const kind = viewing.file_mime;
+                let embed: string | null = null;
+                if (kind === "youtube") {
+                  const m = url.match(/(?:youtu\.be\/|v=|shorts\/|embed\/)([\w-]{11})/);
+                  if (m) embed = `https://www.youtube.com/embed/${m[1]}`;
+                } else if (kind === "drive") {
+                  const m = url.match(/\/d\/([\w-]+)/);
+                  if (m) embed = `https://drive.google.com/file/d/${m[1]}/preview`;
+                }
+                return embed ? (
+                  <iframe src={embed} title={viewing.title ?? "Link"} className="w-full h-[70vh] rounded-lg border border-border" allow="autoplay; fullscreen" />
+                ) : (
+                  <div className="text-center py-12 space-y-3">
+                    <p className="text-sm text-muted-foreground break-all">{url}</p>
+                    <Button asChild variant="secondary"><a href={url} target="_blank" rel="noreferrer"><ExternalLink className="size-4 mr-2" />Abrir link</a></Button>
+                  </div>
+                );
+              })()
             ) : null}
           </div>
+          {viewing?.content_type === "link" && viewing.text_content && (
+            <div className="pt-2 border-t border-border flex justify-end">
+              <Button asChild variant="ghost" size="sm"><a href={viewing.text_content} target="_blank" rel="noreferrer"><ExternalLink className="size-4 mr-2" />Abrir em nova aba</a></Button>
+            </div>
+          )}
           {viewing?.content_type === "file" && viewUrl && (
             <div className="pt-2 border-t border-border flex justify-end">
               <Button asChild variant="ghost" size="sm"><a href={viewUrl} target="_blank" rel="noreferrer"><ExternalLink className="size-4 mr-2" />Abrir em nova aba</a></Button>
