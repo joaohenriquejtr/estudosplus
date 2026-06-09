@@ -26,6 +26,20 @@ const CATEGORIES = [
   { value: "material", label: "Material" },
 ];
 
+const safeStorageFileName = (fileName: string) => {
+  const lastDot = fileName.lastIndexOf(".");
+  const rawBase = lastDot > 0 ? fileName.slice(0, lastDot) : fileName;
+  const rawExt = lastDot > 0 ? fileName.slice(lastDot + 1) : "arquivo";
+  const base = rawBase
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "material";
+  const ext = rawExt.replace(/[^a-zA-Z0-9]/g, "").slice(0, 12) || "bin";
+  return `${base}.${ext}`;
+};
+
 function SubjectDetail() {
   const { id } = Route.useParams();
   const qc = useQueryClient();
@@ -255,7 +269,7 @@ function SubjectDetail() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
-      const path = `${user.id}/${id}/${Date.now()}-${file.name}`;
+      const path = `${user.id}/${id}/${Date.now()}-${safeStorageFileName(file.name)}`;
       const { error: upErr } = await supabase.storage.from("study-materials").upload(path, file);
       if (upErr) throw upErr;
       const { error } = await supabase.from("content_cards").insert({
