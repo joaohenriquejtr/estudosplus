@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger, SidebarFooter, SidebarHeader } from "@/components/ui/sidebar";
-import { LayoutDashboard, BookOpen, ListChecks, CalendarDays, CalendarRange, Settings, GraduationCap, LogOut } from "lucide-react";
+import { LayoutDashboard, BookOpen, ListChecks, CalendarDays, CalendarRange, Settings, GraduationCap, LogOut, Network } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 const items = [
   { title: "Painel", url: "/dashboard", icon: LayoutDashboard },
   { title: "Matérias", url: "/subjects", icon: BookOpen },
+  { title: "Grafo de notas", url: "/graph", icon: Network },
   { title: "Tarefas", url: "/tasks", icon: ListChecks },
   { title: "Cronograma", url: "/schedule", icon: CalendarRange },
   { title: "Provas & Datas", url: "/calendar", icon: CalendarDays },
