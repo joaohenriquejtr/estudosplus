@@ -482,7 +482,7 @@ function SubjectDetail() {
                 </div>
               </div>
               {c.content_type === "text" ? (
-                <p className="text-sm text-muted-foreground line-clamp-4 whitespace-pre-wrap">{c.text_content}</p>
+                <div className="line-clamp-4 text-muted-foreground"><Markdown compact>{c.text_content ?? ""}</Markdown></div>
               ) : c.content_type === "link" ? (
                 <p className="text-xs text-primary truncate">{c.text_content}</p>
               ) : (
