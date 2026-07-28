@@ -13,6 +13,7 @@ import { ArrowLeft, FileText, Upload, Type as TypeIcon, ClipboardPaste, FileDown
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Markdown } from "@/components/Markdown";
 
 export const Route = createFileRoute("/_authenticated/subjects/$id")({
   head: () => ({ meta: [{ title: "Matéria — Estudo+" }] }),
