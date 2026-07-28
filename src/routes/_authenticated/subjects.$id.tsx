@@ -391,11 +391,12 @@ function SubjectDetail() {
               <TabsTrigger value="upload"><Upload className="size-4 mr-2" />Upload</TabsTrigger>
             </TabsList>
             <TabsContent value="type" className="space-y-3 pt-3">
-              <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Escreva suas anotações..." rows={6} />
+              <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder={"Escreva em Markdown (estilo Obsidian)...\n\n# Título\n**negrito**  *itálico*  ==destaque==\n- lista\n- [ ] tarefa\n> citação\n`código`"} rows={8} className="font-mono text-sm" />
+              <p className="text-xs text-muted-foreground">Suporta Markdown: <code className="text-primary">#</code> títulos, <code className="text-primary">**negrito**</code>, listas, <code className="text-primary">- [ ]</code> checkboxes, tabelas, código, links e imagens.</p>
               <Button onClick={() => addText.mutate()} disabled={!text || addText.isPending}>Salvar texto</Button>
             </TabsContent>
             <TabsContent value="paste" className="space-y-3 pt-3">
-              <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Cole o conteúdo aqui (Ctrl+V)..." rows={6} />
+              <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Cole o conteúdo aqui (Ctrl+V)... Markdown suportado." rows={8} className="font-mono text-sm" />
               <Button onClick={() => addText.mutate()} disabled={!text || addText.isPending}>Salvar conteúdo</Button>
             </TabsContent>
             <TabsContent value="link" className="space-y-3 pt-3">
