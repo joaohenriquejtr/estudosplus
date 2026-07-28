@@ -75,6 +75,18 @@ function GraphPage() {
   }, [visibleNotes]);
 
   const selected = visibleNotes.find((note) => note.id === selectedId) ?? null;
+  const selectedOutgoing = selected
+    ? edges
+      .filter((edge) => edge.from === selected.id)
+      .map((edge) => visibleNotes.find((note) => note.id === edge.to))
+      .filter((note): note is GraphNote => Boolean(note))
+    : [];
+  const selectedIncoming = selected
+    ? edges
+      .filter((edge) => edge.to === selected.id)
+      .map((edge) => visibleNotes.find((note) => note.id === edge.from))
+      .filter((note): note is GraphNote => Boolean(note))
+    : [];
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -97,11 +109,15 @@ function GraphPage() {
         <div className="grid lg:grid-cols-[minmax(0,1fr)_250px] gap-4">
           <section className="glass-card overflow-hidden bg-gradient-to-br from-background to-primary/5">
             <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="w-full min-h-[460px] max-h-[70vh]" role="img" aria-label="Grafo de conexões entre notas">
-              <defs><pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse"><path d="M 28 0 L 0 0 0 28" fill="none" stroke="currentColor" strokeOpacity=".05" /></pattern></defs>
+              <defs>
+                <pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse"><path d="M 28 0 L 0 0 0 28" fill="none" stroke="currentColor" strokeOpacity=".05" /></pattern>
+                <marker id="graph-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" /></marker>
+              </defs>
               <rect width={SIZE} height={SIZE} fill="url(#grid)" />
               {edges.map((edge, index) => {
                 const from = positions.get(edge.from); const to = positions.get(edge.to);
-                return from && to ? <line key={`${edge.from}-${edge.to}-${index}`} x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="currentColor" strokeOpacity=".28" strokeWidth="2" /> : null;
+                const highlighted = selectedId === edge.from || selectedId === edge.to;
+                return from && to ? <line key={`${edge.from}-${edge.to}-${index}`} x1={from.x} y1={from.y} x2={to.x} y2={to.y} className="text-primary" stroke="currentColor" strokeOpacity={highlighted ? ".9" : ".55"} strokeWidth={highlighted ? "3" : "2"} markerEnd="url(#graph-arrow)" /> : null;
               })}
               {visibleNotes.map((note) => {
                 const point = positions.get(note.id)!; const active = selectedId === note.id;
@@ -118,6 +134,16 @@ function GraphPage() {
               <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-2 rounded-full" style={{ background: selected.subjectColor }} />{selected.subjectName}</span>
               <h2 className="font-semibold mt-2 break-words">{selected.title}</h2>
               <p className="text-xs text-muted-foreground mt-2">{extractWikiLinks(selected.text).length} conexão(ões) de saída</p>
+              {(selectedOutgoing.length > 0 || selectedIncoming.length > 0) && <div className="mt-4 space-y-3">
+                {selectedOutgoing.length > 0 && <div>
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1.5">Conecta com</p>
+                  <div className="flex flex-wrap gap-1.5">{selectedOutgoing.map((note) => <button key={`out-${note.id}`} onClick={() => setSelectedId(note.id)} className="text-xs rounded-md border border-primary/30 bg-primary/10 px-2 py-1 text-primary hover:bg-primary/20">{note.title}</button>)}</div>
+                </div>}
+                {selectedIncoming.length > 0 && <div>
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1.5">É mencionada por</p>
+                  <div className="flex flex-wrap gap-1.5">{selectedIncoming.map((note) => <button key={`in-${note.id}`} onClick={() => setSelectedId(note.id)} className="text-xs rounded-md border border-border bg-muted/40 px-2 py-1 hover:bg-muted">{note.title}</button>)}</div>
+                </div>}
+              </div>}
               <Link to="/subjects/$id" params={{ id: selected.subject_id }} className="mt-4 inline-flex text-sm text-primary hover:underline">Abrir matéria →</Link>
             </> : <>
               <Link2 className="size-5 text-primary mb-3" /><h2 className="font-medium">Explore suas conexões</h2><p className="text-sm text-muted-foreground mt-1">Clique em um nó para ver a nota e sua matéria.</p>
