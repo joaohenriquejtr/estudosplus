@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Markdown } from "@/components/Markdown";
+import { extractWikiLinks, normalizeNoteTitle, type WikiNote } from "@/lib/note-links";
 
 export const Route = createFileRoute("/_authenticated/subjects/$id")({
   head: () => ({ meta: [{ title: "Matéria — Estudo+" }] }),
@@ -45,6 +46,8 @@ function SubjectDetail() {
   const { id } = Route.useParams();
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
+  const textRef = useRef<HTMLTextAreaElement>(null);
+  const editTextRef = useRef<HTMLTextAreaElement>(null);
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
   const [category, setCategory] = useState("anotacao");
@@ -110,6 +113,36 @@ function SubjectDetail() {
       return data;
     },
   });
+
+  const wikiNotes = useMemo<WikiNote[]>(() => cards
+    .filter((card: any) => card.content_type === "text" && card.title?.trim())
+    .map((card: any) => ({ id: card.id, title: card.title.trim() })), [cards]);
+
+  const wikiSuggestions = (value: string) => {
+    const opening = value.lastIndexOf("[[");
+    if (opening < 0 || value.indexOf("]]", opening) >= 0) return [];
+    const query = normalizeNoteTitle(value.slice(opening + 2));
+    return wikiNotes.filter((note) => normalizeNoteTitle(note.title).includes(query)).slice(0, 5);
+  };
+
+  const insertWikiLink = (note: WikiNote, editing = false) => {
+    const value = editing ? editCardText : text;
+    const opening = value.lastIndexOf("[[");
+    if (opening < 0) return;
+    const next = `${value.slice(0, opening)}[[${note.title}]]${value.slice(value.length)}`;
+    if (editing) setEditCardText(next); else setText(next);
+    requestAnimationFrame(() => (editing ? editTextRef : textRef).current?.focus());
+  };
+
+  const backlinks = useMemo(() => {
+    if (!viewing?.title) return [];
+    const currentTitle = normalizeNoteTitle(viewing.title);
+    return cards.filter((card: any) => card.id !== viewing.id && extractWikiLinks(card.text_content)
+      .some((link) => normalizeNoteTitle(link) === currentTitle));
+  }, [cards, viewing]);
+
+  const textSuggestions = wikiSuggestions(text);
+  const editSuggestions = wikiSuggestions(editCardText);
 
   const filteredCards = useMemo(() => {
     return cards.filter((c: any) => {
@@ -391,12 +424,24 @@ function SubjectDetail() {
               <TabsTrigger value="upload"><Upload className="size-4 mr-2" />Upload</TabsTrigger>
             </TabsList>
             <TabsContent value="type" className="space-y-3 pt-3">
-              <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder={"Escreva em Markdown (estilo Obsidian)...\n\n# Título\n**negrito**  *itálico*  ==destaque==\n- lista\n- [ ] tarefa\n> citação\n`código`"} rows={8} className="font-mono text-sm" />
-              <p className="text-xs text-muted-foreground">Suporta Markdown: <code className="text-primary">#</code> títulos, <code className="text-primary">**negrito**</code>, listas, <code className="text-primary">- [ ]</code> checkboxes, tabelas, código, links e imagens.</p>
+              <Textarea ref={textRef} value={text} onChange={(e) => setText(e.target.value)} placeholder={"Escreva em Markdown (estilo Obsidian)...\n\n# Título\n**negrito**  *itálico*  ==destaque==\n- lista\n- [ ] tarefa\n> citação\n`código`"} rows={8} className="font-mono text-sm" />
+              {textSuggestions.length > 0 && (
+                <div className="rounded-lg border border-primary/30 bg-background p-2 shadow-sm">
+                  <p className="px-2 pb-1 text-xs text-muted-foreground">Vincular nota</p>
+                  {textSuggestions.map((note) => <button key={note.id} type="button" onClick={() => insertWikiLink(note)} className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-muted"><span className="text-primary">[[</span>{note.title}<span className="text-primary">]]</span></button>)}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">Suporta Markdown e conexões de notas: digite <code className="text-primary">[[nome da nota]]</code> para criar um vínculo.</p>
               <Button onClick={() => addText.mutate()} disabled={!text || addText.isPending}>Salvar texto</Button>
             </TabsContent>
             <TabsContent value="paste" className="space-y-3 pt-3">
-              <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Cole o conteúdo aqui (Ctrl+V)... Markdown suportado." rows={8} className="font-mono text-sm" />
+              <Textarea ref={textRef} value={text} onChange={(e) => setText(e.target.value)} placeholder="Cole o conteúdo aqui (Ctrl+V)... Markdown suportado." rows={8} className="font-mono text-sm" />
+              {textSuggestions.length > 0 && (
+                <div className="rounded-lg border border-primary/30 bg-background p-2 shadow-sm">
+                  <p className="px-2 pb-1 text-xs text-muted-foreground">Vincular nota</p>
+                  {textSuggestions.map((note) => <button key={note.id} type="button" onClick={() => insertWikiLink(note)} className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-muted"><span className="text-primary">[[</span>{note.title}<span className="text-primary">]]</span></button>)}
+                </div>
+              )}
               <Button onClick={() => addText.mutate()} disabled={!text || addText.isPending}>Salvar conteúdo</Button>
             </TabsContent>
             <TabsContent value="link" className="space-y-3 pt-3">
@@ -482,7 +527,7 @@ function SubjectDetail() {
                 </div>
               </div>
               {c.content_type === "text" ? (
-                <div className="line-clamp-4 text-muted-foreground"><Markdown compact>{c.text_content ?? ""}</Markdown></div>
+                <div className="line-clamp-4 text-muted-foreground"><Markdown compact wikiNotes={wikiNotes} onWikiLinkClick={(note) => setViewing(cards.find((card: any) => card.id === note.id) ?? null)}>{c.text_content ?? ""}</Markdown></div>
               ) : c.content_type === "link" ? (
                 <p className="text-xs text-primary truncate">{c.text_content}</p>
               ) : (
@@ -505,7 +550,7 @@ function SubjectDetail() {
           </DialogHeader>
           <div className="overflow-auto flex-1 -mx-6 px-6">
             {viewing?.content_type === "text" ? (
-              <Markdown>{viewing.text_content ?? ""}</Markdown>
+              <Markdown wikiNotes={wikiNotes} onWikiLinkClick={(note) => setViewing(cards.find((card: any) => card.id === note.id) ?? null)}>{viewing.text_content ?? ""}</Markdown>
             ) : viewing?.content_type === "file" ? (
               !viewUrl ? (
                 <p className="text-sm text-muted-foreground text-center py-12">Carregando…</p>
@@ -542,6 +587,16 @@ function SubjectDetail() {
               })()
             ) : null}
           </div>
+          {viewing?.content_type === "text" && viewing.title && (
+            <div className="border-t border-border pt-4">
+              <h3 className="text-sm font-medium mb-2">Notas que mencionam esta nota</h3>
+              {backlinks.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma conexão encontrada ainda.</p> : (
+                <div className="flex flex-wrap gap-2">
+                  {backlinks.map((card: any) => <Button key={card.id} variant="secondary" size="sm" onClick={() => setViewing(card)}><Link2 className="size-3.5 mr-1.5" />{card.title ?? "Anotação"}</Button>)}
+                </div>
+              )}
+            </div>
+          )}
           {viewing?.content_type === "link" && viewing.text_content && (
             <div className="pt-2 border-t border-border flex justify-end">
               <Button asChild variant="ghost" size="sm"><a href={viewing.text_content} target="_blank" rel="noreferrer"><ExternalLink className="size-4 mr-2" />Abrir em nova aba</a></Button>
@@ -609,7 +664,16 @@ function SubjectDetail() {
                 </Select>
               </div>
             </div>
-            <div className="space-y-2"><Label>Texto (Markdown)</Label><Textarea value={editCardText} onChange={(e) => setEditCardText(e.target.value)} placeholder="Conteúdo em Markdown..." rows={8} className="font-mono text-sm" /></div>
+            <div className="space-y-2">
+              <Label>Texto (Markdown)</Label>
+              <Textarea ref={editTextRef} value={editCardText} onChange={(e) => setEditCardText(e.target.value)} placeholder="Conteúdo em Markdown..." rows={8} className="font-mono text-sm" />
+              {editSuggestions.length > 0 && (
+                <div className="rounded-lg border border-primary/30 bg-background p-2 shadow-sm">
+                  <p className="px-2 pb-1 text-xs text-muted-foreground">Vincular nota</p>
+                  {editSuggestions.map((note) => <button key={note.id} type="button" onClick={() => insertWikiLink(note, true)} className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-muted"><span className="text-primary">[[</span>{note.title}<span className="text-primary">]]</span></button>)}
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="secondary" onClick={() => setEditingCardId(null)}>Cancelar</Button>

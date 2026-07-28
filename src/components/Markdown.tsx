@@ -1,15 +1,19 @@
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
+import { findWikiNote, toMarkdownWithWikiLinks, type WikiNote } from "@/lib/note-links";
 
 interface MarkdownProps {
   children: string;
   className?: string;
   /** Compact mode for card previews (smaller headings, tighter spacing). */
   compact?: boolean;
+  /** Notes available for [[internal links]]. */
+  wikiNotes?: WikiNote[];
+  onWikiLinkClick?: (note: WikiNote) => void;
 }
 
-export function Markdown({ children, className, compact = false }: MarkdownProps) {
+export function Markdown({ children, className, compact = false, wikiNotes = [], onWikiLinkClick }: MarkdownProps) {
   return (
     <div
       className={cn(
@@ -20,13 +24,27 @@ export function Markdown({ children, className, compact = false }: MarkdownProps
     >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        urlTransform={(url) => url.startsWith("note:") ? url : defaultUrlTransform(url)}
         components={{
-          a: ({ node, ...props }) => (
-            <a {...props} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-2 hover:opacity-80" />
-          ),
+          a: ({ href, children: linkChildren, ...props }) => {
+            if (href?.startsWith("note:")) {
+              const title = decodeURIComponent(href.slice("note:".length));
+              const note = findWikiNote(wikiNotes, title);
+              return note ? (
+                <button
+                  type="button"
+                  onClick={(event) => { event.stopPropagation(); onWikiLinkClick?.(note); }}
+                  className="text-primary underline underline-offset-2 hover:opacity-80"
+                >
+                  {linkChildren}
+                </button>
+              ) : <span className="text-muted-foreground decoration-dashed underline underline-offset-2">{linkChildren}</span>;
+            }
+            return <a {...props} href={href} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-2 hover:opacity-80" />;
+          },
         }}
       >
-        {children}
+        {toMarkdownWithWikiLinks(children)}
       </ReactMarkdown>
     </div>
   );
