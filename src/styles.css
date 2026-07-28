@@ -109,3 +109,53 @@
   border-radius: var(--radius-lg);
   backdrop-filter: blur(10px);
 }
+
+/* Markdown (Obsidian-inspired) */
+.markdown-body { word-wrap: break-word; }
+.markdown-body > * + * { margin-top: 0.75em; }
+.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
+  font-weight: 600; line-height: 1.25; color: var(--color-foreground);
+  margin-top: 1.2em; margin-bottom: 0.4em;
+}
+.markdown-body h1 { font-size: 1.6em; border-bottom: 1px solid var(--color-border); padding-bottom: 0.25em; }
+.markdown-body h2 { font-size: 1.35em; border-bottom: 1px solid color-mix(in oklab, var(--color-border) 60%, transparent); padding-bottom: 0.2em; }
+.markdown-body h3 { font-size: 1.15em; }
+.markdown-body h4 { font-size: 1em; color: color-mix(in oklab, var(--color-foreground) 85%, transparent); }
+.markdown-body p { margin: 0; }
+.markdown-body strong { color: var(--color-foreground); font-weight: 600; }
+.markdown-body em { color: color-mix(in oklab, var(--color-foreground) 90%, transparent); }
+.markdown-body ul, .markdown-body ol { padding-left: 1.5em; }
+.markdown-body ul { list-style: disc; }
+.markdown-body ol { list-style: decimal; }
+.markdown-body li { margin: 0.2em 0; }
+.markdown-body li > input[type="checkbox"] { margin-right: 0.4em; transform: translateY(1px); }
+.markdown-body blockquote {
+  border-left: 3px solid var(--color-primary);
+  padding: 0.2em 0.9em; margin: 0;
+  background: color-mix(in oklab, var(--color-primary) 8%, transparent);
+  color: color-mix(in oklab, var(--color-foreground) 90%, transparent);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+.markdown-body code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 0.9em;
+  background: color-mix(in oklab, var(--color-muted) 70%, transparent);
+  padding: 0.15em 0.4em; border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+.markdown-body pre {
+  background: color-mix(in oklab, var(--color-muted) 60%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.9em 1em; overflow-x: auto;
+}
+.markdown-body pre code { background: transparent; border: 0; padding: 0; font-size: 0.85em; }
+.markdown-body hr { border: 0; border-top: 1px solid var(--color-border); margin: 1.2em 0; }
+.markdown-body a { color: var(--color-primary); text-decoration: underline; text-underline-offset: 2px; }
+.markdown-body table {
+  border-collapse: collapse; width: 100%; font-size: 0.9em;
+  border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden;
+}
+.markdown-body th, .markdown-body td { border: 1px solid var(--color-border); padding: 0.4em 0.7em; text-align: left; }
+.markdown-body th { background: color-mix(in oklab, var(--color-muted) 70%, transparent); font-weight: 600; }
+.markdown-body img { max-width: 100%; border-radius: var(--radius-md); }

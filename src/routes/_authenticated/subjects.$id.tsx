@@ -13,6 +13,7 @@ import { ArrowLeft, FileText, Upload, Type as TypeIcon, ClipboardPaste, FileDown
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Markdown } from "@/components/Markdown";
 
 export const Route = createFileRoute("/_authenticated/subjects/$id")({
   head: () => ({ meta: [{ title: "Matéria — Estudo+" }] }),
@@ -390,11 +391,12 @@ function SubjectDetail() {
               <TabsTrigger value="upload"><Upload className="size-4 mr-2" />Upload</TabsTrigger>
             </TabsList>
             <TabsContent value="type" className="space-y-3 pt-3">
-              <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Escreva suas anotações..." rows={6} />
+              <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder={"Escreva em Markdown (estilo Obsidian)...\n\n# Título\n**negrito**  *itálico*  ==destaque==\n- lista\n- [ ] tarefa\n> citação\n`código`"} rows={8} className="font-mono text-sm" />
+              <p className="text-xs text-muted-foreground">Suporta Markdown: <code className="text-primary">#</code> títulos, <code className="text-primary">**negrito**</code>, listas, <code className="text-primary">- [ ]</code> checkboxes, tabelas, código, links e imagens.</p>
               <Button onClick={() => addText.mutate()} disabled={!text || addText.isPending}>Salvar texto</Button>
             </TabsContent>
             <TabsContent value="paste" className="space-y-3 pt-3">
-              <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Cole o conteúdo aqui (Ctrl+V)..." rows={6} />
+              <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Cole o conteúdo aqui (Ctrl+V)... Markdown suportado." rows={8} className="font-mono text-sm" />
               <Button onClick={() => addText.mutate()} disabled={!text || addText.isPending}>Salvar conteúdo</Button>
             </TabsContent>
             <TabsContent value="link" className="space-y-3 pt-3">
@@ -480,7 +482,7 @@ function SubjectDetail() {
                 </div>
               </div>
               {c.content_type === "text" ? (
-                <p className="text-sm text-muted-foreground line-clamp-4 whitespace-pre-wrap">{c.text_content}</p>
+                <div className="line-clamp-4 text-muted-foreground"><Markdown compact>{c.text_content ?? ""}</Markdown></div>
               ) : c.content_type === "link" ? (
                 <p className="text-xs text-primary truncate">{c.text_content}</p>
               ) : (
@@ -503,9 +505,7 @@ function SubjectDetail() {
           </DialogHeader>
           <div className="overflow-auto flex-1 -mx-6 px-6">
             {viewing?.content_type === "text" ? (
-              <div className="prose prose-invert max-w-none">
-                <p className="text-base leading-relaxed whitespace-pre-wrap text-foreground">{viewing.text_content}</p>
-              </div>
+              <Markdown>{viewing.text_content ?? ""}</Markdown>
             ) : viewing?.content_type === "file" ? (
               !viewUrl ? (
                 <p className="text-sm text-muted-foreground text-center py-12">Carregando…</p>
@@ -609,7 +609,7 @@ function SubjectDetail() {
                 </Select>
               </div>
             </div>
-            <div className="space-y-2"><Label>Texto</Label><Textarea value={editCardText} onChange={(e) => setEditCardText(e.target.value)} placeholder="Conteúdo..." rows={6} /></div>
+            <div className="space-y-2"><Label>Texto (Markdown)</Label><Textarea value={editCardText} onChange={(e) => setEditCardText(e.target.value)} placeholder="Conteúdo em Markdown..." rows={8} className="font-mono text-sm" /></div>
           </div>
           <DialogFooter>
             <Button variant="secondary" onClick={() => setEditingCardId(null)}>Cancelar</Button>
