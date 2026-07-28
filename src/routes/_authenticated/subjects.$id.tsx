@@ -505,9 +505,7 @@ function SubjectDetail() {
           </DialogHeader>
           <div className="overflow-auto flex-1 -mx-6 px-6">
             {viewing?.content_type === "text" ? (
-              <div className="prose prose-invert max-w-none">
-                <p className="text-base leading-relaxed whitespace-pre-wrap text-foreground">{viewing.text_content}</p>
-              </div>
+              <Markdown>{viewing.text_content ?? ""}</Markdown>
             ) : viewing?.content_type === "file" ? (
               !viewUrl ? (
                 <p className="text-sm text-muted-foreground text-center py-12">Carregando…</p>
