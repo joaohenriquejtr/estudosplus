@@ -609,7 +609,7 @@ function SubjectDetail() {
                 </Select>
               </div>
             </div>
-            <div className="space-y-2"><Label>Texto</Label><Textarea value={editCardText} onChange={(e) => setEditCardText(e.target.value)} placeholder="Conteúdo..." rows={6} /></div>
+            <div className="space-y-2"><Label>Texto (Markdown)</Label><Textarea value={editCardText} onChange={(e) => setEditCardText(e.target.value)} placeholder="Conteúdo em Markdown..." rows={8} className="font-mono text-sm" /></div>
           </div>
           <DialogFooter>
             <Button variant="secondary" onClick={() => setEditingCardId(null)}>Cancelar</Button>
