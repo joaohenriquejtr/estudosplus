@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Network, BookOpen, Link2 } from "lucide-react";
@@ -21,6 +21,7 @@ const SIZE = 720;
 const CENTER = SIZE / 2;
 
 function GraphPage() {
+  const navigate = useNavigate();
   const [subjectFilter, setSubjectFilter] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -104,8 +105,8 @@ function GraphPage() {
               })}
               {visibleNotes.map((note) => {
                 const point = positions.get(note.id)!; const active = selectedId === note.id;
-                return <g key={note.id} className="cursor-pointer" onClick={() => setSelectedId(note.id)}>
-                  <title>{note.title} — {note.subjectName}</title>
+                return <g key={note.id} className="cursor-pointer" onClick={() => setSelectedId(note.id)} onDoubleClick={() => navigate({ to: "/subjects/$id", params: { id: note.subject_id }, search: { note: note.id } })}>
+                  <title>{note.title} — {note.subjectName}. Dê dois cliques para abrir.</title>
                   <circle cx={point.x} cy={point.y} r={active ? 25 : 20} fill={note.subjectColor} fillOpacity={active ? ".95" : ".78"} stroke="white" strokeOpacity=".8" strokeWidth={active ? 3 : 1.5} />
                   <text x={point.x} y={point.y + 37} textAnchor="middle" className="fill-foreground text-[13px] font-medium pointer-events-none">{note.title.length > 22 ? `${note.title.slice(0, 21)}…` : note.title}</text>
                 </g>;

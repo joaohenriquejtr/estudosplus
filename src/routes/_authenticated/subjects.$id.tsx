@@ -18,6 +18,9 @@ import { extractWikiLinks, normalizeNoteTitle, type WikiNote } from "@/lib/note-
 
 export const Route = createFileRoute("/_authenticated/subjects/$id")({
   head: () => ({ meta: [{ title: "Matéria — Estudo+" }] }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    note: typeof search.note === "string" ? search.note : undefined,
+  }),
   component: SubjectDetail,
 });
 
@@ -44,10 +47,12 @@ const safeStorageFileName = (fileName: string) => {
 
 function SubjectDetail() {
   const { id } = Route.useParams();
+  const { note: noteId } = Route.useSearch();
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const editTextRef = useRef<HTMLTextAreaElement>(null);
+  const openedNoteId = useRef<string | null>(null);
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
   const [category, setCategory] = useState("anotacao");
@@ -113,6 +118,15 @@ function SubjectDetail() {
       return data;
     },
   });
+
+  useEffect(() => {
+    if (!noteId || openedNoteId.current === noteId) return;
+    const note = cards.find((card: any) => card.id === noteId);
+    if (note) {
+      openedNoteId.current = noteId;
+      setViewing(note);
+    }
+  }, [cards, noteId]);
 
   const wikiNotes = useMemo<WikiNote[]>(() => cards
     .filter((card: any) => card.content_type === "text" && card.title?.trim())
