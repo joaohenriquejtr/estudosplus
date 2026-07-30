@@ -18,9 +18,9 @@ import { extractWikiLinks, normalizeNoteTitle, type WikiNote } from "@/lib/note-
 
 export const Route = createFileRoute("/_authenticated/subjects/$id")({
   head: () => ({ meta: [{ title: "Matéria — Estudo+" }] }),
-  validateSearch: (search: Record<string, unknown>) => ({
-    note: typeof search.note === "string" ? search.note : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { note?: string } => (
+    typeof search.note === "string" ? { note: search.note } : {}
+  ),
   component: SubjectDetail,
 });
 
