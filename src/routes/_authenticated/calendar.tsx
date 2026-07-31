@@ -262,7 +262,11 @@ function CalendarPage() {
           <h3 className="font-semibold mb-3">
             {search.trim() ? "Resultados da busca" : selected ? format(selected, "EEEE, d 'de' MMMM", { locale: ptBR }) : "Selecione um dia"}
           </h3>
-          {filteredEvents.length === 0 ? (
+          {isLoading ? (
+            <ListSkeleton rows={3} />
+          ) : isError ? (
+            <EmptyState icon={TriangleAlert} title="Não foi possível carregar suas datas." description="Verifique sua conexão e tente recarregar a página." />
+          ) : filteredEvents.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               {search.trim() ? "Nenhum resultado encontrado." : "Nenhum evento neste dia."}
             </p>
@@ -289,12 +293,21 @@ function CalendarPage() {
                     </div>
                   </div>
                   <div className="flex gap-1 shrink-0">
-                    <button onClick={() => openEdit(e)} className="text-muted-foreground hover:text-primary p-1" aria-label="Editar">
+                    <button onClick={() => openEdit(e)} className="text-muted-foreground hover:text-primary p-1" aria-label={`Editar ${e.title}`}>
                       <Pencil className="size-4" />
                     </button>
-                    <button onClick={() => { if (confirm("Remover?")) remove.mutate(e.id); }} className="text-muted-foreground hover:text-destructive p-1" aria-label="Remover">
+                    <button
+                      onClick={async () => { if (await confirm({ title: "Excluir data", description: `Excluir "${e.title}" do calendário?` })) remove.mutate(e.id); }}
+                      className="text-muted-foreground hover:text-destructive p-1"
+                      aria-label={`Excluir ${e.title}`}
+                    >
                       <Trash2 className="size-4" />
                     </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
                   </div>
                 </li>
               ))}
