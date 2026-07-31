@@ -7,8 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarRange, Plus, Trash2, Clock, Pencil } from "lucide-react";
+import { CalendarRange, Plus, Trash2, Clock, Pencil, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
+import { ListSkeleton } from "@/components/ListSkeleton";
+import { useConfirm } from "@/components/useConfirm";
 
 export const Route = createFileRoute("/_authenticated/schedule")({
   head: () => ({ meta: [{ title: "Cronograma — Estudo+" }] }),
@@ -30,6 +34,7 @@ const EMPTY: SlotForm = { weekday: "1", start_time: "08:00", end_time: "", subje
 
 function SchedulePage() {
   const qc = useQueryClient();
+  const { confirm, confirmDialog } = useConfirm();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<SlotForm>(EMPTY);
@@ -43,7 +48,7 @@ function SchedulePage() {
     },
   });
 
-  const { data: slots = [] } = useQuery({
+  const { data: slots = [], isLoading, isError } = useQuery({
     queryKey: ["schedule"],
     queryFn: async () => {
       const { data, error } = await supabase.from("schedule_slots").select("*, subjects(name,color)").order("start_time");
@@ -104,7 +109,7 @@ function SchedulePage() {
       }
     },
     onSuccess: () => {
-      toast.success(editingId ? "Horário atualizado!" : "Horário adicionado!");
+      toast.success(editingId ? "Horário atualizado" : "Horário adicionado");
       qc.invalidateQueries({ queryKey: ["schedule"] });
       setOpen(false); setEditingId(null);
     },
@@ -117,120 +122,151 @@ function SchedulePage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Removido");
+      toast.success("Horário excluído");
       qc.invalidateQueries({ queryKey: ["schedule"] });
     },
   });
 
-  return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <header className="flex items-center gap-3">
-        <div className="size-10 rounded-lg bg-primary/20 flex items-center justify-center">
-          <CalendarRange className="size-5 text-primary" />
-        </div>
-        <div className="flex-1">
-          <h1 className="text-2xl font-semibold">Cronograma semanal</h1>
-          <p className="text-sm text-muted-foreground">Seus horários fixos. Edite manualmente quando quiser.</p>
-        </div>
-        <Button className="gap-2" onClick={() => openCreate()}><Plus className="size-4" />Adicionar horário</Button>
-        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditingId(null); }}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingId ? "Editar horário" : "Novo horário"}</DialogTitle>
-              <DialogDescription>{editingId ? "Atualize a aula ou atividade." : "Adicione uma aula ou atividade ao seu cronograma fixo."}</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label>Dia da semana</Label>
-                <Select value={form.weekday} onValueChange={(v) => setForm((f) => ({ ...f, weekday: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {WEEKDAYS.map((d) => <SelectItem key={d.idx} value={String(d.idx)}>{d.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2"><Label>Início</Label><Input type="time" value={form.start_time} onChange={(e) => setForm((f) => ({ ...f, start_time: e.target.value }))} /></div>
-                <div className="space-y-2"><Label>Fim (opcional)</Label><Input type="time" value={form.end_time} onChange={(e) => setForm((f) => ({ ...f, end_time: e.target.value }))} /></div>
-              </div>
-              <div className="space-y-2">
-                <Label>Matéria (opcional)</Label>
-                <Select value={form.subject_id || "none"} onValueChange={(v) => setForm((f) => ({ ...f, subject_id: v === "none" ? "" : v }))}>
-                  <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhuma</SelectItem>
-                    {subjects.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2"><Label>Título (opcional)</Label><Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="Ex.: Revisão de Biologia" /></div>
-            </div>
-            <DialogFooter>
-              <Button onClick={() => save.mutate()} disabled={!form.start_time || save.isPending}>{editingId ? "Salvar" : "Adicionar"}</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </header>
+  const daysWithItems = WEEKDAYS.filter((d) => (grouped.get(d.idx) ?? []).length > 0 || d.idx === todayIdx);
+  const emptyDays = WEEKDAYS.filter((d) => !daysWithItems.includes(d));
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {WEEKDAYS.map((d) => {
-          const items = grouped.get(d.idx) ?? [];
-          const isToday = d.idx === todayIdx;
-          return (
-            <section key={d.idx} className={`glass-card p-4 ${isToday ? "ring-1 ring-primary/40" : ""}`}>
-              <header className="flex items-center justify-between mb-3">
-                <h2 className="font-semibold">{d.name}</h2>
-                {isToday && <span className="text-[10px] uppercase tracking-wide text-primary bg-primary/15 px-2 py-0.5 rounded-full">Hoje</span>}
-              </header>
-              {items.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center">Sem horários</p>
-              ) : (
-                <ul className="space-y-2">
-                  {items.map((s: any) => {
-                    const ongoing = isToday && s.start_time <= nowTime && (!s.end_time || nowTime <= s.end_time);
-                    const body = (
-                      <div className={`flex items-start gap-3 p-2.5 rounded-lg transition ${ongoing ? "bg-primary/15 border border-primary/30" : "bg-muted/40 hover:bg-muted/70"}`}>
-                        <span className="size-2 rounded-full mt-2 shrink-0" style={{ background: s.subjects?.color || "var(--primary)" }} />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                            <Clock className="size-3" />
-                            {s.start_time.slice(0, 5)}{s.end_time ? ` – ${s.end_time.slice(0, 5)}` : ""}
-                          </p>
-                          <p className="text-sm font-medium truncate">{s.title}</p>
-                          {s.subjects && <p className="text-xs text-muted-foreground truncate">{s.subjects.name}</p>}
-                        </div>
-                      </div>
-                    );
-                    return (
-                      <li key={s.id} className="relative">
-                        {s.subject_id ? (
-                          <Link to="/subjects/$id" params={{ id: s.subject_id }}>{body}</Link>
-                        ) : body}
-                        <div className="absolute top-1.5 right-1.5 flex gap-1">
-                          <button
-                            onClick={(e) => { e.preventDefault(); openEdit(s); }}
-                            className="text-muted-foreground hover:text-primary p-1 rounded bg-background/60 backdrop-blur"
-                            aria-label="Editar"
-                          >
-                            <Pencil className="size-3.5" />
-                          </button>
-                          <button
-                            onClick={(e) => { e.preventDefault(); if (confirm("Remover?")) remove.mutate(s.id); }}
-                            className="text-muted-foreground hover:text-destructive p-1 rounded bg-background/60 backdrop-blur"
-                            aria-label="Remover"
-                          >
-                            <Trash2 className="size-3.5" />
-                          </button>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
+  return (
+    <div className="max-w-6xl mx-auto">
+      {confirmDialog}
+      <PageHeader
+        icon={CalendarRange}
+        title="Cronograma semanal"
+        description="Seus horários fixos de aula e estudo."
+        action={<Button className="gap-2" onClick={() => openCreate()}><Plus className="size-4" />Adicionar horário</Button>}
+      />
+
+      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditingId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingId ? "Editar horário" : "Novo horário"}</DialogTitle>
+            <DialogDescription>{editingId ? "Atualize a aula ou atividade." : "Adicione uma aula ou atividade ao seu cronograma fixo."}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label>Dia da semana</Label>
+              <Select value={form.weekday} onValueChange={(v) => setForm((f) => ({ ...f, weekday: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {WEEKDAYS.map((d) => <SelectItem key={d.idx} value={String(d.idx)}>{d.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2"><Label>Início</Label><Input type="time" value={form.start_time} onChange={(e) => setForm((f) => ({ ...f, start_time: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>Fim (opcional)</Label><Input type="time" value={form.end_time} onChange={(e) => setForm((f) => ({ ...f, end_time: e.target.value }))} /></div>
+            </div>
+            <div className="space-y-2">
+              <Label>Matéria (opcional)</Label>
+              <Select value={form.subject_id || "none"} onValueChange={(v) => setForm((f) => ({ ...f, subject_id: v === "none" ? "" : v }))}>
+                <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhuma</SelectItem>
+                  {subjects.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2"><Label>Título (opcional)</Label><Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="Ex.: Revisão de Biologia" /></div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => save.mutate()} disabled={!form.start_time || save.isPending}>{editingId ? "Salvar" : "Adicionar"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {isLoading ? (
+        <ListSkeleton rows={4} />
+      ) : isError ? (
+        <EmptyState icon={TriangleAlert} title="Não foi possível carregar seu cronograma." description="Verifique sua conexão e tente recarregar a página." />
+      ) : slots.length === 0 ? (
+        <EmptyState icon={CalendarRange} title="Nenhum horário cadastrado." description="Adicione seus horários fixos para ver o cronograma da semana." />
+      ) : (
+        <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {daysWithItems.map((d) => {
+              const items = grouped.get(d.idx) ?? [];
+              const isToday = d.idx === todayIdx;
+              return (
+                <section key={d.idx} className={`glass-card p-4 ${isToday ? "ring-1 ring-primary/40" : ""}`}>
+                  <header className="flex items-center justify-between mb-3">
+                    <h2 className="font-semibold">{d.name}</h2>
+                    {isToday && <span className="text-[10px] uppercase tracking-wide text-primary bg-primary/15 px-2 py-0.5 rounded-full">Hoje</span>}
+                  </header>
+                  {items.length === 0 ? (
+                    <button onClick={() => openCreate(d.idx)} className="w-full text-xs text-muted-foreground hover:text-primary py-4 text-center">
+                      Sem horários · adicionar
+                    </button>
+                  ) : (
+                    <ul className="space-y-2">
+                      {items.map((s: any) => {
+                        const ongoing = isToday && s.start_time <= nowTime && (!s.end_time || nowTime <= s.end_time);
+                        const body = (
+                          <div className={`flex items-start gap-3 p-2.5 pr-16 rounded-lg transition ${ongoing ? "bg-primary/15 border border-primary/30" : "bg-muted/40 hover:bg-muted/70"}`}>
+                            <span className="size-2 rounded-full mt-2 shrink-0" style={{ background: s.subjects?.color || "var(--primary)" }} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                                <Clock className="size-3" />
+                                {s.start_time.slice(0, 5)}{s.end_time ? ` – ${s.end_time.slice(0, 5)}` : ""}
+                              </p>
+                              <p className="text-sm font-medium truncate">{s.title}</p>
+                              {s.subjects && <p className="text-xs text-muted-foreground truncate">{s.subjects.name}</p>}
+                            </div>
+                          </div>
+                        );
+                        return (
+                          <li key={s.id} className="relative">
+                            {s.subject_id ? (
+                              <Link to="/subjects/$id" params={{ id: s.subject_id }}>{body}</Link>
+                            ) : body}
+                            <div className="absolute top-1.5 right-1.5 flex gap-1">
+                              <button
+                                onClick={(e) => { e.preventDefault(); openEdit(s); }}
+                                className="text-muted-foreground hover:text-primary p-1.5 rounded bg-background/60 backdrop-blur"
+                                aria-label={`Editar horário ${s.title}`}
+                              >
+                                <Pencil className="size-3.5" />
+                              </button>
+                              <button
+                                onClick={async (e) => { e.preventDefault(); if (await confirm({ title: "Excluir horário", description: `Excluir "${s.title}" de ${d.name}?` })) remove.mutate(s.id); }}
+                                className="text-muted-foreground hover:text-destructive p-1.5 rounded bg-background/60 backdrop-blur"
+                                aria-label={`Excluir horário ${s.title}`}
+                              >
+                                <Trash2 className="size-3.5" />
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </section>
+              );
+            })}
+          </div>
+
+          {emptyDays.length > 0 && (
+            <section className="glass-card p-4">
+              <h2 className="text-sm font-medium mb-2">Dias sem horários</h2>
+              <div className="flex flex-wrap gap-2">
+                {emptyDays.map((d) => (
+                  <button
+                    key={d.idx}
+                    onClick={() => openCreate(d.idx)}
+                    className="text-xs px-3 py-1.5 rounded-full border border-border bg-muted/40 hover:bg-muted inline-flex items-center gap-1.5"
+                  >
+                    <Plus className="size-3" />{d.name}
+                  </button>
+                ))}
+              </div>
             </section>
-          );
-        })}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
+
