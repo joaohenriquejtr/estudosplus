@@ -308,11 +308,6 @@ function CalendarPage() {
               ))}
             </ul>
           )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
       </div>
     </div>
