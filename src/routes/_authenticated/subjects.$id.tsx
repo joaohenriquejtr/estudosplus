@@ -183,7 +183,7 @@ function SubjectDetail() {
       return data;
     },
     onSuccess: (c: any) => {
-      toast.success("Capítulo criado!");
+      toast.success("Capítulo criado");
       qc.invalidateQueries({ queryKey: ["chapters", id] });
       setNewChapterTitle("");
       setNewChapterOpen(false);
@@ -198,7 +198,7 @@ function SubjectDetail() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Capítulo removido");
+      toast.success("Capítulo excluído");
       qc.invalidateQueries({ queryKey: ["chapters", id] });
       qc.invalidateQueries({ queryKey: ["cards", id] });
       setSelectedChapter("all");
@@ -212,7 +212,7 @@ function SubjectDetail() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Capítulo atualizado!");
+      toast.success("Capítulo atualizado");
       qc.invalidateQueries({ queryKey: ["chapters", id] });
       setEditingChapterId(null);
       setEditChapterTitle("");
@@ -226,7 +226,7 @@ function SubjectDetail() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Matéria atualizada!");
+      toast.success("Matéria atualizada");
       qc.invalidateQueries({ queryKey: ["subject", id] });
       qc.invalidateQueries({ queryKey: ["subjects"] });
       setEditSubjectOpen(false);
@@ -245,7 +245,7 @@ function SubjectDetail() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Conteúdo adicionado!");
+      toast.success("Conteúdo adicionado");
       qc.invalidateQueries({ queryKey: ["cards", id] });
       setTitle(""); setText("");
     },
@@ -274,7 +274,7 @@ function SubjectDetail() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Link adicionado!");
+      toast.success("Link adicionado");
       qc.invalidateQueries({ queryKey: ["cards", id] });
       setTitle(""); setLinkUrl("");
     },
@@ -290,7 +290,7 @@ function SubjectDetail() {
       const { error } = await supabase.from("content_cards").delete().eq("id", cardId);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Removido"); qc.invalidateQueries({ queryKey: ["cards", id] }); },
+    onSuccess: () => { toast.success("Conteúdo excluído"); qc.invalidateQueries({ queryKey: ["cards", id] }); },
   });
 
   const updateCard = useMutation({
@@ -305,7 +305,7 @@ function SubjectDetail() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Conteúdo atualizado!");
+      toast.success("Conteúdo atualizado");
       qc.invalidateQueries({ queryKey: ["cards", id] });
       setEditingCardId(null);
     },
@@ -326,7 +326,7 @@ function SubjectDetail() {
         chapter_id: targetChapterId, category,
       });
       if (error) throw error;
-      toast.success("Arquivo enviado!");
+      toast.success("Arquivo enviado");
       qc.invalidateQueries({ queryKey: ["cards", id] });
       setTitle("");
       if (fileRef.current) fileRef.current.value = "";

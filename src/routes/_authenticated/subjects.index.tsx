@@ -6,16 +6,28 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useState, useMemo } from "react";
-import { Plus, BookOpen, Trash2, Search, Pencil } from "lucide-react";
+import { Plus, BookOpen, Trash2, Search, Pencil, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
+import { CardsSkeleton } from "@/components/ListSkeleton";
+import { useConfirm } from "@/components/useConfirm";
 
 export const Route = createFileRoute("/_authenticated/subjects/")({
-  head: () => ({ meta: [{ title: "Matérias — Estudo+" }] }),
+  head: () => ({
+    meta: [
+      { title: "Matérias — Estudo+" },
+      { name: "description", content: "Suas disciplinas, capítulos e materiais de estudo organizados em um só lugar." },
+      { property: "og:title", content: "Matérias — Estudo+" },
+      { property: "og:description", content: "Suas disciplinas, capítulos e materiais de estudo organizados em um só lugar." },
+    ],
+  }),
   component: SubjectsPage,
 });
 
 function SubjectsPage() {
   const qc = useQueryClient();
+  const { confirm, confirmDialog } = useConfirm();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [color, setColor] = useState("#8b5cf6");
@@ -26,7 +38,7 @@ function SubjectsPage() {
   const [editName, setEditName] = useState("");
   const [editColor, setEditColor] = useState("#8b5cf6");
 
-  const { data: subjects = [] } = useQuery({
+  const { data: subjects = [], isLoading, isError } = useQuery({
     queryKey: ["subjects"],
     queryFn: async () => {
       const { data, error } = await supabase.from("subjects").select("*").order("name");
@@ -43,7 +55,7 @@ function SubjectsPage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Matéria criada!");
+      toast.success("Matéria criada");
       qc.invalidateQueries({ queryKey: ["subjects"] });
       setName(""); setOpen(false);
     },
@@ -55,7 +67,8 @@ function SubjectsPage() {
       const { error } = await supabase.from("subjects").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Removida"); qc.invalidateQueries({ queryKey: ["subjects"] }); },
+    onSuccess: () => { toast.success("Matéria excluída"); qc.invalidateQueries({ queryKey: ["subjects"] }); },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const update = useMutation({
@@ -65,7 +78,7 @@ function SubjectsPage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Matéria atualizada!");
+      toast.success("Matéria atualizada");
       qc.invalidateQueries({ queryKey: ["subjects"] });
       setEditOpen(false);
       setEditingId(null);
@@ -81,34 +94,36 @@ function SubjectsPage() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Matérias</h1>
-          <p className="text-sm text-muted-foreground">Suas disciplinas e conteúdos organizados.</p>
-        </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="size-4 mr-2" />Nova matéria</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Nova matéria</DialogTitle></DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2"><Label>Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Matemática" /></div>
-              <div className="space-y-2"><Label>Cor</Label><Input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-10 w-20 p-1" /></div>
-            </div>
-            <DialogFooter>
-              <Button onClick={() => create.mutate()} disabled={!name || create.isPending}>Criar</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+      {confirmDialog}
+      <PageHeader
+        icon={BookOpen}
+        title="Matérias"
+        description="Suas disciplinas e conteúdos organizados."
+        action={
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button><Plus className="size-4 mr-2" />Nova matéria</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Nova matéria</DialogTitle></DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2"><Label htmlFor="new-subject-name">Nome</Label><Input id="new-subject-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Matemática" /></div>
+                <div className="space-y-2"><Label htmlFor="new-subject-color">Cor</Label><Input id="new-subject-color" type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-10 w-20 p-1" /></div>
+              </div>
+              <DialogFooter>
+                <Button onClick={() => create.mutate()} disabled={!name || create.isPending}>Criar</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        }
+      />
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Editar matéria</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2"><Label>Nome</Label><Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Matemática" /></div>
-            <div className="space-y-2"><Label>Cor</Label><Input type="color" value={editColor} onChange={(e) => setEditColor(e.target.value)} className="h-10 w-20 p-1" /></div>
+            <div className="space-y-2"><Label htmlFor="edit-subject-name">Nome</Label><Input id="edit-subject-name" value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Matemática" /></div>
+            <div className="space-y-2"><Label htmlFor="edit-subject-color">Cor</Label><Input id="edit-subject-color" type="color" value={editColor} onChange={(e) => setEditColor(e.target.value)} className="h-10 w-20 p-1" /></div>
           </div>
           <DialogFooter>
             <Button variant="secondary" onClick={() => { setEditOpen(false); setEditingId(null); }}>Cancelar</Button>
@@ -121,42 +136,42 @@ function SubjectsPage() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
         <Input
           placeholder="Buscar matéria..."
+          aria-label="Buscar matéria"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-9"
         />
       </div>
 
-      {subjects.length === 0 ? (
-        <div className="glass-card p-10 text-center">
-          <BookOpen className="size-10 mx-auto text-muted-foreground" />
-          <p className="mt-3 text-muted-foreground">Adicione sua primeira matéria para começar.</p>
-        </div>
+      {isLoading ? (
+        <CardsSkeleton cards={6} />
+      ) : isError ? (
+        <EmptyState icon={TriangleAlert} title="Não foi possível carregar suas matérias." description="Verifique sua conexão e tente recarregar a página." />
+      ) : subjects.length === 0 ? (
+        <EmptyState icon={BookOpen} title="Nenhuma matéria ainda." description="Adicione sua primeira matéria para começar." />
       ) : filtered.length === 0 ? (
-        <div className="glass-card p-10 text-center">
-          <Search className="size-10 mx-auto text-muted-foreground" />
-          <p className="mt-3 text-muted-foreground">Nenhuma matéria encontrada.</p>
-        </div>
+        <EmptyState icon={Search} title="Nenhuma matéria encontrada." description="Tente outro termo de busca." />
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((s: any) => (
             <div key={s.id} className="glass-card p-5 group relative hover:border-primary/50 transition">
-              <Link to="/subjects/$id" params={{ id: s.id }} className="block">
+              <Link to="/subjects/$id" params={{ id: s.id }} className="block pr-16">
                 <div className="size-10 rounded-lg flex items-center justify-center mb-3" style={{ background: `${s.color}33` }}>
                   <BookOpen className="size-5" style={{ color: s.color }} />
                 </div>
-                <h3 className="font-medium">{s.name}</h3>
+                <h3 className="font-medium break-words">{s.name}</h3>
                 <p className="text-xs text-muted-foreground mt-1">Ver conteúdos →</p>
               </Link>
-              <div className="absolute top-3 right-3 flex gap-1.5">
+              <div className="absolute top-3 right-3 flex gap-1">
                 <button
                   onClick={() => { setEditingId(s.id); setEditName(s.name); setEditColor(s.color); setEditOpen(true); }}
-                  className="opacity-0 group-hover:opacity-100 transition text-muted-foreground hover:text-primary"
-                  aria-label="Editar"
+                  className="p-1.5 rounded-md transition text-muted-foreground hover:text-primary md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+                  aria-label={`Editar matéria ${s.name}`}
                 ><Pencil className="size-4" /></button>
                 <button
-                  onClick={() => { if (confirm(`Remover "${s.name}"?`)) remove.mutate(s.id); }}
-                  className="opacity-0 group-hover:opacity-100 transition text-muted-foreground hover:text-destructive"
+                  onClick={async () => { if (await confirm({ title: "Excluir matéria", description: `Excluir "${s.name}"? Os conteúdos vinculados também serão removidos.` })) remove.mutate(s.id); }}
+                  className="p-1.5 rounded-md transition text-muted-foreground hover:text-destructive md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+                  aria-label={`Excluir matéria ${s.name}`}
                 ><Trash2 className="size-4" /></button>
               </div>
             </div>

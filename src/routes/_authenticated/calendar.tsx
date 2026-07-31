@@ -10,13 +10,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, ChevronDown, X, Search, Pencil } from "lucide-react";
+import { Plus, Trash2, ChevronDown, X, Search, Pencil, CalendarDays, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { format, isSameDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
+import { ListSkeleton } from "@/components/ListSkeleton";
+import { useConfirm } from "@/components/useConfirm";
 
 export const Route = createFileRoute("/_authenticated/calendar")({
-  head: () => ({ meta: [{ title: "Provas & Datas — Estudo+" }] }),
+  head: () => ({
+    meta: [
+      { title: "Provas & Datas — Estudo+" },
+      { name: "description", content: "Calendário de provas, trabalhos e apresentações, com lembretes por e-mail." },
+      { property: "og:title", content: "Provas & Datas — Estudo+" },
+      { property: "og:description", content: "Calendário de provas, trabalhos e apresentações, com lembretes por e-mail." },
+    ],
+  }),
   component: CalendarPage,
 });
 
@@ -27,6 +38,7 @@ const EMPTY: EventForm = { title: "", subjectIds: [], date: "", type: "prova" };
 
 function CalendarPage() {
   const qc = useQueryClient();
+  const { confirm, confirmDialog } = useConfirm();
   const [selected, setSelected] = useState<Date | undefined>(new Date());
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -39,7 +51,7 @@ function CalendarPage() {
     queryFn: async () => (await supabase.from("subjects").select("*").order("name")).data ?? [],
   });
 
-  const { data: rawEvents = [] } = useQuery({
+  const { data: rawEvents = [], isLoading, isError } = useQuery({
     queryKey: ["events"],
     queryFn: async () => {
       const { data, error } = await supabase.from("events").select("*").order("event_date");
@@ -111,7 +123,7 @@ function CalendarPage() {
       }
     },
     onSuccess: () => {
-      toast.success(editingId ? "Data atualizada!" : "Data cadastrada!");
+      toast.success(editingId ? "Data atualizada" : "Data cadastrada");
       qc.invalidateQueries({ queryKey: ["events"] });
       qc.invalidateQueries({ queryKey: ["event-subjects"] });
       setForm(EMPTY); setOpen(false); setEditingId(null);
@@ -127,7 +139,7 @@ function CalendarPage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Removida");
+      toast.success("Data excluída");
       qc.invalidateQueries({ queryKey: ["events"] });
       qc.invalidateQueries({ queryKey: ["event-subjects"] });
     },
@@ -151,13 +163,15 @@ function CalendarPage() {
 
   return (
     <div className="max-w-5xl mx-auto">
+      {confirmDialog}
+      <PageHeader
+        icon={CalendarDays}
+        title="Provas & Datas"
+        description="Compromissos com data marcada: provas, trabalhos e apresentações."
+        action={<Button onClick={openCreate}><Plus className="size-4 mr-2" />Nova data</Button>}
+      />
       <div className="flex flex-col gap-4 mb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold">Provas & Datas</h1>
-            <p className="text-sm text-muted-foreground">Calendário de provas, trabalhos e apresentações.</p>
-          </div>
-          <Button onClick={openCreate}><Plus className="size-4 mr-2" />Nova data</Button>
+        <div>
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditingId(null); setForm(EMPTY); } }}>
             <DialogContent className="max-w-lg">
               <DialogHeader><DialogTitle>{editingId ? "Editar data" : "Nova data"}</DialogTitle></DialogHeader>
