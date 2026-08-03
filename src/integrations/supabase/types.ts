@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          parent_id: string | null
           position: number
           subject_id: string
           title: string
@@ -26,6 +27,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          parent_id?: string | null
           position?: number
           subject_id: string
           title: string
@@ -34,12 +36,20 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          parent_id?: string | null
           position?: number
           subject_id?: string
           title?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "chapters_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "chapters_subject_id_fkey"
             columns: ["subject_id"]
@@ -62,6 +72,7 @@ export type Database = {
           subject_id: string
           text_content: string | null
           title: string | null
+          updated_at: string
           user_id: string
         }
         Insert: {
@@ -76,6 +87,7 @@ export type Database = {
           subject_id: string
           text_content?: string | null
           title?: string | null
+          updated_at?: string
           user_id: string
         }
         Update: {
@@ -90,6 +102,7 @@ export type Database = {
           subject_id?: string
           text_content?: string | null
           title?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
