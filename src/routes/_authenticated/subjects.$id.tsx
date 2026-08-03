@@ -431,11 +431,11 @@ function SubjectDetail() {
             </div>
           </div>
           <Tabs defaultValue="type">
-            <TabsList className="grid grid-cols-4">
-              <TabsTrigger value="type"><TypeIcon className="size-4 mr-2" />Digitar</TabsTrigger>
-              <TabsTrigger value="paste"><ClipboardPaste className="size-4 mr-2" />Colar</TabsTrigger>
-              <TabsTrigger value="link"><Link2 className="size-4 mr-2" />Link</TabsTrigger>
-              <TabsTrigger value="upload"><Upload className="size-4 mr-2" />Upload</TabsTrigger>
+            <TabsList className="grid h-auto grid-cols-2 gap-1 sm:grid-cols-4">
+              <TabsTrigger value="type"><TypeIcon className="size-4 mr-2 shrink-0" />Digitar</TabsTrigger>
+              <TabsTrigger value="paste"><ClipboardPaste className="size-4 mr-2 shrink-0" />Colar</TabsTrigger>
+              <TabsTrigger value="link"><Link2 className="size-4 mr-2 shrink-0" />Link</TabsTrigger>
+              <TabsTrigger value="upload"><Upload className="size-4 mr-2 shrink-0" />Upload</TabsTrigger>
             </TabsList>
             <TabsContent value="type" className="space-y-3 pt-3">
               <Textarea ref={textRef} value={text} onChange={(e) => setText(e.target.value)} placeholder={"Escreva em Markdown (estilo Obsidian)...\n\n# Título\n**negrito**  *itálico*  ==destaque==\n- lista\n- [ ] tarefa\n> citação\n`código`"} rows={8} className="font-mono text-sm" />
