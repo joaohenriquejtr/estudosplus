@@ -526,15 +526,15 @@ function SubjectDetail() {
                 <div className="flex gap-1.5 shrink-0">
                   <button
                     onClick={(e) => { e.stopPropagation(); setEditingCardId(c.id); setEditCardTitle(c.title || ""); setEditCardText(c.text_content || ""); setEditCardCategory(c.category || "anotacao"); setEditCardChapter(c.chapter_id); }}
-                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary"
-                    aria-label="Editar"
+                    className="rounded-md p-1 text-muted-foreground transition hover:text-primary md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+                    aria-label="Editar conteúdo"
                   >
                     <Pencil className="size-4" />
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); if (confirm("Remover?")) remove.mutate(c.id); }}
-                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                    aria-label="Remover"
+                    onClick={(e) => { e.stopPropagation(); void (async () => { if (await confirmAction({ title: "Excluir conteúdo", description: "Esta ação não pode ser desfeita." })) remove.mutate(c.id); })(); }}
+                    className="rounded-md p-1 text-muted-foreground transition hover:text-destructive md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+                    aria-label="Excluir conteúdo"
                   >
                     <Trash2 className="size-4" />
                   </button>
