@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useConfirm } from "@/components/useConfirm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, FileText, Upload, Type as TypeIcon, ClipboardPaste, FileDown, Trash2, ExternalLink, Plus, BookMarked, Pencil, Link2, Youtube, HardDrive, Image as ImageIcon, FileType2 } from "lucide-react";
@@ -46,6 +47,7 @@ const safeStorageFileName = (fileName: string) => {
 };
 
 function SubjectDetail() {
+  const { confirm: confirmAction, confirmDialog } = useConfirm();
   const { id } = Route.useParams();
   const { note: noteId } = Route.useSearch();
   const qc = useQueryClient();
@@ -387,25 +389,25 @@ function SubjectDetail() {
           <button onClick={() => setSelectedChapter("all")} className={`text-xs px-3 py-1.5 rounded-full border ${selectedChapter === "all" ? "bg-primary/20 border-primary/40 text-primary" : "bg-muted/40 border-border hover:bg-muted"}`}>Todos</button>
           <button onClick={() => setSelectedChapter("none")} className={`text-xs px-3 py-1.5 rounded-full border ${selectedChapter === "none" ? "bg-primary/20 border-primary/40 text-primary" : "bg-muted/40 border-border hover:bg-muted"}`}>Sem capítulo</button>
           {chapters.map((c: any) => (
-            <div key={c.id} className="group inline-flex items-center">
-              <button onClick={() => setSelectedChapter(c.id)} className={`text-xs pl-3 pr-2 py-1.5 rounded-full border inline-flex items-center gap-2 ${selectedChapter === c.id ? "bg-primary/20 border-primary/40 text-primary" : "bg-muted/40 border-border hover:bg-muted"}`}>
+            <div key={c.id} className={`inline-flex items-center gap-1 rounded-full border pl-3 pr-2 py-1 ${selectedChapter === c.id ? "bg-primary/20 border-primary/40 text-primary" : "bg-muted/40 border-border"}`}>
+              <button type="button" onClick={() => setSelectedChapter(c.id)} className="text-xs">
                 {c.title}
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => { e.stopPropagation(); setEditingChapterId(c.id); setEditChapterTitle(c.title); }}
-                  className="opacity-60 hover:opacity-100 hover:text-primary"
-                >
-                  <Pencil className="size-3" />
-                </span>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => { e.stopPropagation(); if (confirm(`Remover "${c.title}"? Os conteúdos ficarão sem capítulo.`)) removeChapter.mutate(c.id); }}
-                  className="opacity-60 hover:opacity-100 hover:text-destructive"
-                >
-                  <Trash2 className="size-3" />
-                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setEditingChapterId(c.id); setEditChapterTitle(c.title); }}
+                aria-label={`Editar capítulo ${c.title}`}
+                className="rounded p-0.5 opacity-70 transition hover:opacity-100 hover:text-primary"
+              >
+                <Pencil className="size-3" />
+              </button>
+              <button
+                type="button"
+                onClick={() => { void (async () => { if (await confirmAction({ title: `Excluir "${c.title}"?`, description: "Os conteúdos ficarão sem capítulo." })) removeChapter.mutate(c.id); })(); }}
+                aria-label={`Excluir capítulo ${c.title}`}
+                className="rounded p-0.5 opacity-70 transition hover:opacity-100 hover:text-destructive"
+              >
+                <Trash2 className="size-3" />
               </button>
             </div>
           ))}
@@ -431,11 +433,11 @@ function SubjectDetail() {
             </div>
           </div>
           <Tabs defaultValue="type">
-            <TabsList className="grid grid-cols-4">
-              <TabsTrigger value="type"><TypeIcon className="size-4 mr-2" />Digitar</TabsTrigger>
-              <TabsTrigger value="paste"><ClipboardPaste className="size-4 mr-2" />Colar</TabsTrigger>
-              <TabsTrigger value="link"><Link2 className="size-4 mr-2" />Link</TabsTrigger>
-              <TabsTrigger value="upload"><Upload className="size-4 mr-2" />Upload</TabsTrigger>
+            <TabsList className="grid h-auto grid-cols-2 gap-1 sm:grid-cols-4">
+              <TabsTrigger value="type"><TypeIcon className="size-4 mr-2 shrink-0" />Digitar</TabsTrigger>
+              <TabsTrigger value="paste"><ClipboardPaste className="size-4 mr-2 shrink-0" />Colar</TabsTrigger>
+              <TabsTrigger value="link"><Link2 className="size-4 mr-2 shrink-0" />Link</TabsTrigger>
+              <TabsTrigger value="upload"><Upload className="size-4 mr-2 shrink-0" />Upload</TabsTrigger>
             </TabsList>
             <TabsContent value="type" className="space-y-3 pt-3">
               <Textarea ref={textRef} value={text} onChange={(e) => setText(e.target.value)} placeholder={"Escreva em Markdown (estilo Obsidian)...\n\n# Título\n**negrito**  *itálico*  ==destaque==\n- lista\n- [ ] tarefa\n> citação\n`código`"} rows={8} className="font-mono text-sm" />
@@ -526,15 +528,15 @@ function SubjectDetail() {
                 <div className="flex gap-1.5 shrink-0">
                   <button
                     onClick={(e) => { e.stopPropagation(); setEditingCardId(c.id); setEditCardTitle(c.title || ""); setEditCardText(c.text_content || ""); setEditCardCategory(c.category || "anotacao"); setEditCardChapter(c.chapter_id); }}
-                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary"
-                    aria-label="Editar"
+                    className="rounded-md p-1 text-muted-foreground transition hover:text-primary md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+                    aria-label="Editar conteúdo"
                   >
                     <Pencil className="size-4" />
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); if (confirm("Remover?")) remove.mutate(c.id); }}
-                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                    aria-label="Remover"
+                    onClick={(e) => { e.stopPropagation(); void (async () => { if (await confirmAction({ title: "Excluir conteúdo", description: "Esta ação não pode ser desfeita." })) remove.mutate(c.id); })(); }}
+                    className="rounded-md p-1 text-muted-foreground transition hover:text-destructive md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+                    aria-label="Excluir conteúdo"
                   >
                     <Trash2 className="size-4" />
                   </button>
@@ -695,6 +697,7 @@ function SubjectDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {confirmDialog}
     </div>
   );
 }
