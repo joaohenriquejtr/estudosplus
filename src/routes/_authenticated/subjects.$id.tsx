@@ -697,6 +697,7 @@ function SubjectDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {confirmDialog}
     </div>
   );
 }
