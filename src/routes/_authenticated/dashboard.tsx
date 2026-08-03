@@ -169,7 +169,7 @@ function Dashboard() {
         <section className="glass-card p-5">
           <header className="flex items-center gap-2 mb-4">
             <CalendarClock className="size-4 text-primary" />
-            <h2 className="font-semibold">Próximas provas</h2>
+            <h2 className="font-semibold">Próximos compromissos</h2>
           </header>
           {events.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhuma data próxima cadastrada.</p>
