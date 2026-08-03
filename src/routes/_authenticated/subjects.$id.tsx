@@ -389,25 +389,25 @@ function SubjectDetail() {
           <button onClick={() => setSelectedChapter("all")} className={`text-xs px-3 py-1.5 rounded-full border ${selectedChapter === "all" ? "bg-primary/20 border-primary/40 text-primary" : "bg-muted/40 border-border hover:bg-muted"}`}>Todos</button>
           <button onClick={() => setSelectedChapter("none")} className={`text-xs px-3 py-1.5 rounded-full border ${selectedChapter === "none" ? "bg-primary/20 border-primary/40 text-primary" : "bg-muted/40 border-border hover:bg-muted"}`}>Sem capítulo</button>
           {chapters.map((c: any) => (
-            <div key={c.id} className="group inline-flex items-center">
-              <button onClick={() => setSelectedChapter(c.id)} className={`text-xs pl-3 pr-2 py-1.5 rounded-full border inline-flex items-center gap-2 ${selectedChapter === c.id ? "bg-primary/20 border-primary/40 text-primary" : "bg-muted/40 border-border hover:bg-muted"}`}>
+            <div key={c.id} className={`inline-flex items-center gap-1 rounded-full border pl-3 pr-2 py-1 ${selectedChapter === c.id ? "bg-primary/20 border-primary/40 text-primary" : "bg-muted/40 border-border"}`}>
+              <button type="button" onClick={() => setSelectedChapter(c.id)} className="text-xs">
                 {c.title}
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => { e.stopPropagation(); setEditingChapterId(c.id); setEditChapterTitle(c.title); }}
-                  className="opacity-60 hover:opacity-100 hover:text-primary"
-                >
-                  <Pencil className="size-3" />
-                </span>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => { e.stopPropagation(); if (confirm(`Remover "${c.title}"? Os conteúdos ficarão sem capítulo.`)) removeChapter.mutate(c.id); }}
-                  className="opacity-60 hover:opacity-100 hover:text-destructive"
-                >
-                  <Trash2 className="size-3" />
-                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setEditingChapterId(c.id); setEditChapterTitle(c.title); }}
+                aria-label={`Editar capítulo ${c.title}`}
+                className="rounded p-0.5 opacity-70 transition hover:opacity-100 hover:text-primary"
+              >
+                <Pencil className="size-3" />
+              </button>
+              <button
+                type="button"
+                onClick={() => { void (async () => { if (await confirmAction({ title: `Excluir "${c.title}"?`, description: "Os conteúdos ficarão sem capítulo." })) removeChapter.mutate(c.id); })(); }}
+                aria-label={`Excluir capítulo ${c.title}`}
+                className="rounded p-0.5 opacity-70 transition hover:opacity-100 hover:text-destructive"
+              >
+                <Trash2 className="size-3" />
               </button>
             </div>
           ))}
