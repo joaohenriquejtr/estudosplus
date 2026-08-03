@@ -3,34 +3,36 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { useConfirm } from "@/components/useConfirm";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, FileText, Upload, Type as TypeIcon, ClipboardPaste, FileDown, Trash2, ExternalLink, Plus, BookMarked, Pencil, Link2, Youtube, HardDrive, Image as ImageIcon, FileType2 } from "lucide-react";
+import { ArrowLeft, FileText, Upload, Trash2, Plus, Pencil, Link2, X, PanelLeft, FolderPlus, Search } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { Markdown } from "@/components/Markdown";
 import { extractWikiLinks, normalizeNoteTitle, type WikiNote } from "@/lib/note-links";
+import { VaultTree, NoteIcon, noteLabel, type VaultFolder, type VaultNote } from "@/components/vault/VaultTree";
+import { NoteView, CATEGORIES } from "@/components/vault/NoteView";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/subjects/$id")({
-  head: () => ({ meta: [{ title: "Matéria — Estudo+" }] }),
+  head: () => ({
+    meta: [
+      { title: "Matéria — Estudo+" },
+      { name: "description", content: "Organize suas notas em pastas, abra várias notas em abas e conecte conteúdos como no Obsidian." },
+      { property: "og:title", content: "Matéria — Estudo+" },
+      { property: "og:description", content: "Pastas, notas e abas abertas para estudar com fluxo." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   validateSearch: (search: Record<string, unknown>): { note?: string } => (
     typeof search.note === "string" ? { note: search.note } : {}
   ),
-  component: SubjectDetail,
+  component: SubjectVault;
 });
-
-const CATEGORIES = [
-  { value: "anotacao", label: "Anotação" },
-  { value: "resumo", label: "Resumo" },
-  { value: "exercicio", label: "Exercício" },
-  { value: "material", label: "Material" },
-];
 
 const safeStorageFileName = (fileName: string) => {
   const lastDot = fileName.lastIndexOf(".");
@@ -46,53 +48,39 @@ const safeStorageFileName = (fileName: string) => {
   return `${base}.${ext}`;
 };
 
-function SubjectDetail() {
+function SubjectVault() {
   const { confirm: confirmAction, confirmDialog } = useConfirm();
   const { id } = Route.useParams();
-  const { note: noteId } = Route.useSearch();
+  const { note: noteParam } = Route.useSearch();
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
-  const textRef = useRef<HTMLTextAreaElement>(null);
-  const editTextRef = useRef<HTMLTextAreaElement>(null);
-  const openedNoteId = useRef<string | null>(null);
-  const [title, setTitle] = useState("");
-  const [text, setText] = useState("");
-  const [category, setCategory] = useState("anotacao");
-  const [uploading, setUploading] = useState(false);
+  const openedParam = useRef<string | null>(null);
+
+  const [openTabs, setOpenTabs] = useState<string[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const [newFolderParent, setNewFolderParent] = useState<string | null | undefined>(undefined);
+  const [newFolderTitle, setNewFolderTitle] = useState("");
+  const [renameFolder, setRenameFolder] = useState<VaultFolder | null>(null);
+  const [renameTitle, setRenameTitle] = useState("");
+
+  const [newNoteFolder, setNewNoteFolder] = useState<string | null | undefined>(undefined);
+  const [newNoteTitle, setNewNoteTitle] = useState("");
+  const [newNoteText, setNewNoteText] = useState("");
+  const [newNoteCategory, setNewNoteCategory] = useState("anotacao");
+
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkTitle, setLinkTitle] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
-  const [linkKind, setLinkKind] = useState<"youtube" | "drive" | "generic">("generic");
-  const [viewing, setViewing] = useState<any | null>(null);
-  const [viewUrl, setViewUrl] = useState<string | null>(null);
-  const [selectedChapter, setSelectedChapter] = useState<string>("all");
-  const [filterCategory, setFilterCategory] = useState<string>("all");
-  const [newChapterOpen, setNewChapterOpen] = useState(false);
-  const [newChapterTitle, setNewChapterTitle] = useState("");
+  const [uploadFolder, setUploadFolder] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const [editSubjectOpen, setEditSubjectOpen] = useState(false);
   const [editSubjectName, setEditSubjectName] = useState("");
   const [editSubjectColor, setEditSubjectColor] = useState("");
-
-  const [editingChapterId, setEditingChapterId] = useState<string | null>(null);
-  const [editChapterTitle, setEditChapterTitle] = useState("");
-
-  const [editingCardId, setEditingCardId] = useState<string | null>(null);
-  const [editCardTitle, setEditCardTitle] = useState("");
-  const [editCardText, setEditCardText] = useState("");
-  const [editCardCategory, setEditCardCategory] = useState("anotacao");
-  const [editCardChapter, setEditCardChapter] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setViewUrl(null);
-    if (viewing?.content_type === "file" && viewing.file_url) {
-      supabase.storage.from("study-materials").createSignedUrl(viewing.file_url, 600).then(({ data, error }) => {
-        if (cancelled) return;
-        if (error) { toast.error(error.message); return; }
-        setViewUrl(data.signedUrl);
-      });
-    }
-    return () => { cancelled = true; };
-  }, [viewing]);
 
   const { data: subject } = useQuery({
     queryKey: ["subject", id],
@@ -103,121 +91,218 @@ function SubjectDetail() {
     },
   });
 
-  const { data: chapters = [] } = useQuery({
+  const { data: folders = [], isLoading: loadingFolders } = useQuery({
     queryKey: ["chapters", id],
     queryFn: async () => {
       const { data, error } = await supabase.from("chapters").select("*").eq("subject_id", id).order("position").order("created_at");
       if (error) throw error;
-      return data;
+      return data as any[];
     },
   });
 
-  const { data: cards = [] } = useQuery({
+  const { data: cards = [], isLoading: loadingCards } = useQuery({
     queryKey: ["cards", id],
     queryFn: async () => {
       const { data, error } = await supabase.from("content_cards").select("*").eq("subject_id", id).order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as any[];
     },
   });
 
+  /* ---------- tabs persistence ---------- */
+  const storageKey = `vault-tabs-${id}`;
   useEffect(() => {
-    if (!noteId || openedNoteId.current === noteId) return;
-    const note = cards.find((card: any) => card.id === noteId);
-    if (note) {
-      openedNoteId.current = noteId;
-      setViewing(note);
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { tabs?: string[]; active?: string | null };
+        setOpenTabs(parsed.tabs ?? []);
+        setActiveId(parsed.active ?? parsed.tabs?.[0] ?? null);
+      }
+    } catch { /* ignore */ }
+  }, [storageKey]);
+
+  useEffect(() => {
+    try { localStorage.setItem(storageKey, JSON.stringify({ tabs: openTabs, active: activeId })); } catch { /* ignore */ }
+  }, [openTabs, activeId, storageKey]);
+
+  // drop tabs whose notes no longer exist
+  useEffect(() => {
+    if (loadingCards) return;
+    const valid = openTabs.filter((tabId) => cards.some((c) => c.id === tabId));
+    if (valid.length !== openTabs.length) {
+      setOpenTabs(valid);
+      if (activeId && !valid.includes(activeId)) setActiveId(valid[valid.length - 1] ?? null);
     }
-  }, [cards, noteId]);
+  }, [cards, loadingCards]);
 
+  const openNote = (noteId: string) => {
+    setOpenTabs((tabs) => (tabs.includes(noteId) ? tabs : [...tabs, noteId]));
+    setActiveId(noteId);
+    setSidebarOpen(false);
+    const card = cards.find((c) => c.id === noteId);
+    if (card?.chapter_id) setExpanded((e) => ({ ...e, [card.chapter_id]: true }));
+  };
+
+  const closeTab = (noteId: string) => {
+    setOpenTabs((tabs) => {
+      const next = tabs.filter((t) => t !== noteId);
+      if (activeId === noteId) setActiveId(next[next.length - 1] ?? null);
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    if (!noteParam || openedParam.current === noteParam) return;
+    if (cards.some((c) => c.id === noteParam)) {
+      openedParam.current = noteParam;
+      openNote(noteParam);
+    }
+  }, [cards, noteParam]);
+
+  /* ---------- derived ---------- */
   const wikiNotes = useMemo<WikiNote[]>(() => cards
-    .filter((card: any) => card.content_type === "text" && card.title?.trim())
-    .map((card: any) => ({ id: card.id, title: card.title.trim() })), [cards]);
+    .filter((c) => c.content_type === "text" && c.title?.trim())
+    .map((c) => ({ id: c.id, title: c.title.trim() })), [cards]);
 
-  const wikiSuggestions = (value: string) => {
-    const opening = value.lastIndexOf("[[");
-    if (opening < 0 || value.indexOf("]]", opening) >= 0) return [];
-    const query = normalizeNoteTitle(value.slice(opening + 2));
-    return wikiNotes.filter((note) => normalizeNoteTitle(note.title).includes(query)).slice(0, 5);
-  };
-
-  const insertWikiLink = (note: WikiNote, editing = false) => {
-    const value = editing ? editCardText : text;
-    const opening = value.lastIndexOf("[[");
-    if (opening < 0) return;
-    const next = `${value.slice(0, opening)}[[${note.title}]]${value.slice(value.length)}`;
-    if (editing) setEditCardText(next); else setText(next);
-    requestAnimationFrame(() => (editing ? editTextRef : textRef).current?.focus());
-  };
+  const activeNote = cards.find((c) => c.id === activeId) ?? null;
 
   const backlinks = useMemo(() => {
-    if (!viewing?.title) return [];
-    const currentTitle = normalizeNoteTitle(viewing.title);
-    return cards.filter((card: any) => card.id !== viewing.id && extractWikiLinks(card.text_content)
-      .some((link) => normalizeNoteTitle(link) === currentTitle));
-  }, [cards, viewing]);
+    if (!activeNote?.title) return [];
+    const current = normalizeNoteTitle(activeNote.title);
+    return cards.filter((c) => c.id !== activeNote.id && extractWikiLinks(c.text_content).some((l) => normalizeNoteTitle(l) === current));
+  }, [cards, activeNote]);
 
-  const textSuggestions = wikiSuggestions(text);
-  const editSuggestions = wikiSuggestions(editCardText);
+  const searchResults = useMemo(() => {
+    const q = search.trim().toLocaleLowerCase("pt-BR");
+    if (!q) return null;
+    return cards.filter((c) =>
+      (c.title ?? "").toLocaleLowerCase("pt-BR").includes(q) ||
+      (c.file_name ?? "").toLocaleLowerCase("pt-BR").includes(q) ||
+      (c.text_content ?? "").toLocaleLowerCase("pt-BR").includes(q));
+  }, [cards, search]);
 
-  const filteredCards = useMemo(() => {
-    return cards.filter((c: any) => {
-      if (selectedChapter === "all") {
-        // show all
-      } else if (selectedChapter === "none") {
-        if (c.chapter_id) return false;
-      } else if (c.chapter_id !== selectedChapter) return false;
-      if (filterCategory !== "all" && c.category !== filterCategory) return false;
-      return true;
-    });
-  }, [cards, selectedChapter, filterCategory]);
-
-  const targetChapterId = selectedChapter !== "all" && selectedChapter !== "none" ? selectedChapter : null;
-
-  const createChapter = useMutation({
+  /* ---------- mutations ---------- */
+  const createFolder = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
       const { data, error } = await supabase.from("chapters").insert({
-        user_id: user.id, subject_id: id, title: newChapterTitle, position: chapters.length,
+        user_id: user.id, subject_id: id, title: newFolderTitle.trim(),
+        parent_id: newFolderParent ?? null, position: folders.length,
       }).select().single();
       if (error) throw error;
-      return data;
+      return data as any;
     },
-    onSuccess: (c: any) => {
-      toast.success("Capítulo criado");
+    onSuccess: (folder) => {
+      toast.success("Pasta criada");
       qc.invalidateQueries({ queryKey: ["chapters", id] });
-      setNewChapterTitle("");
-      setNewChapterOpen(false);
-      setSelectedChapter(c.id);
+      setExpanded((e) => ({ ...e, [folder.id]: true, ...(folder.parent_id ? { [folder.parent_id]: true } : {}) }));
+      setNewFolderTitle("");
+      setNewFolderParent(undefined);
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const removeChapter = useMutation({
-    mutationFn: async (chId: string) => {
-      const { error } = await supabase.from("chapters").delete().eq("id", chId);
+  const updateFolder = useMutation({
+    mutationFn: async () => {
+      if (!renameFolder) throw new Error("Nenhuma pasta selecionada");
+      const { error } = await supabase.from("chapters").update({ title: renameTitle.trim() }).eq("id", renameFolder.id);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Capítulo excluído");
+      toast.success("Pasta renomeada");
       qc.invalidateQueries({ queryKey: ["chapters", id] });
-      qc.invalidateQueries({ queryKey: ["cards", id] });
-      setSelectedChapter("all");
+      setRenameFolder(null);
     },
+    onError: (e: Error) => toast.error(e.message),
   });
 
-  const updateChapter = useMutation({
-    mutationFn: async () => {
-      if (!editingChapterId) throw new Error("Nenhum capítulo selecionado");
-      const { error } = await supabase.from("chapters").update({ title: editChapterTitle }).eq("id", editingChapterId);
+  const removeFolder = useMutation({
+    mutationFn: async (folderId: string) => {
+      const { error } = await supabase.from("chapters").delete().eq("id", folderId);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Capítulo atualizado");
+      toast.success("Pasta excluída");
       qc.invalidateQueries({ queryKey: ["chapters", id] });
-      setEditingChapterId(null);
-      setEditChapterTitle("");
+      qc.invalidateQueries({ queryKey: ["cards", id] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const createNote = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+      const { data, error } = await supabase.from("content_cards").insert({
+        user_id: user.id, subject_id: id, title: newNoteTitle.trim() || "Sem título",
+        content_type: "text", text_content: newNoteText, category: newNoteCategory,
+        chapter_id: newNoteFolder ?? null,
+      }).select().single();
+      if (error) throw error;
+      return data as any;
+    },
+    onSuccess: async (card) => {
+      toast.success("Nota criada");
+      await qc.invalidateQueries({ queryKey: ["cards", id] });
+      setOpenTabs((tabs) => (tabs.includes(card.id) ? tabs : [...tabs, card.id]));
+      setActiveId(card.id);
+      if (card.chapter_id) setExpanded((e) => ({ ...e, [card.chapter_id]: true }));
+      setNewNoteTitle(""); setNewNoteText(""); setNewNoteFolder(undefined);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const createLink = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+      let url = linkUrl.trim();
+      if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+      try { new URL(url); } catch { throw new Error("Link inválido"); }
+      const lower = url.toLowerCase();
+      const kind = lower.includes("youtu") ? "youtube" : (lower.includes("drive.google.com") || lower.includes("docs.google.com")) ? "drive" : "generic";
+      const { data, error } = await supabase.from("content_cards").insert({
+        user_id: user.id, subject_id: id, title: linkTitle.trim() || url, content_type: "link",
+        text_content: url, file_mime: kind, category: "material", chapter_id: uploadFolder,
+      }).select().single();
+      if (error) throw error;
+      return data as any;
+    },
+    onSuccess: async (card) => {
+      toast.success("Link adicionado");
+      await qc.invalidateQueries({ queryKey: ["cards", id] });
+      setLinkOpen(false); setLinkTitle(""); setLinkUrl("");
+      openNote(card.id);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updateNote = useMutation({
+    mutationFn: async (patch: { id: string; title: string | null; text_content: string | null; category: string; chapter_id: string | null }) => {
+      const { id: cardId, ...rest } = patch;
+      const { error } = await supabase.from("content_cards").update(rest).eq("id", cardId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Nota salva");
+      qc.invalidateQueries({ queryKey: ["cards", id] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const removeNote = useMutation({
+    mutationFn: async (cardId: string) => {
+      const card = cards.find((c) => c.id === cardId);
+      if (card?.file_url) await supabase.storage.from("study-materials").remove([card.file_url]);
+      const { error } = await supabase.from("content_cards").delete().eq("id", cardId);
+      if (error) throw error;
+    },
+    onSuccess: (_d, cardId) => {
+      toast.success("Nota excluída");
+      closeTab(cardId);
+      qc.invalidateQueries({ queryKey: ["cards", id] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -236,85 +321,7 @@ function SubjectDetail() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const addText = useMutation({
-    mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Não autenticado");
-      const { error } = await supabase.from("content_cards").insert({
-        user_id: user.id, subject_id: id, title: title || null, content_type: "text", text_content: text,
-        chapter_id: targetChapterId, category,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Conteúdo adicionado");
-      qc.invalidateQueries({ queryKey: ["cards", id] });
-      setTitle(""); setText("");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const detectKind = (url: string): "youtube" | "drive" | "generic" => {
-    const u = url.toLowerCase();
-    if (u.includes("youtube.com") || u.includes("youtu.be")) return "youtube";
-    if (u.includes("drive.google.com") || u.includes("docs.google.com")) return "drive";
-    return "generic";
-  };
-
-  const addLink = useMutation({
-    mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Não autenticado");
-      let url = linkUrl.trim();
-      if (!/^https?:\/\//i.test(url)) url = "https://" + url;
-      try { new URL(url); } catch { throw new Error("Link inválido"); }
-      const kind = linkKind === "generic" ? detectKind(url) : linkKind;
-      const { error } = await supabase.from("content_cards").insert({
-        user_id: user.id, subject_id: id, title: title || url, content_type: "link",
-        text_content: url, file_mime: kind, chapter_id: targetChapterId, category,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Link adicionado");
-      qc.invalidateQueries({ queryKey: ["cards", id] });
-      setTitle(""); setLinkUrl("");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const remove = useMutation({
-    mutationFn: async (cardId: string) => {
-      const card = cards.find((c: any) => c.id === cardId);
-      if (card?.file_url) {
-        await supabase.storage.from("study-materials").remove([card.file_url]);
-      }
-      const { error } = await supabase.from("content_cards").delete().eq("id", cardId);
-      if (error) throw error;
-    },
-    onSuccess: () => { toast.success("Conteúdo excluído"); qc.invalidateQueries({ queryKey: ["cards", id] }); },
-  });
-
-  const updateCard = useMutation({
-    mutationFn: async () => {
-      if (!editingCardId) throw new Error("Nenhum conteúdo selecionado");
-      const { error } = await supabase.from("content_cards").update({
-        title: editCardTitle || null,
-        text_content: editCardText || null,
-        category: editCardCategory,
-        chapter_id: editCardChapter,
-      }).eq("id", editingCardId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Conteúdo atualizado");
-      qc.invalidateQueries({ queryKey: ["cards", id] });
-      setEditingCardId(null);
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const uploadFile = async (file: File) => {
+  const doUpload = async (file: File) => {
     setUploading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -322,15 +329,15 @@ function SubjectDetail() {
       const path = `${user.id}/${id}/${Date.now()}-${safeStorageFileName(file.name)}`;
       const { error: upErr } = await supabase.storage.from("study-materials").upload(path, file);
       if (upErr) throw upErr;
-      const { error } = await supabase.from("content_cards").insert({
-        user_id: user.id, subject_id: id, title: title || file.name, content_type: "file",
+      const { data, error } = await supabase.from("content_cards").insert({
+        user_id: user.id, subject_id: id, title: file.name, content_type: "file",
         file_url: path, file_name: file.name, file_mime: file.type,
-        chapter_id: targetChapterId, category,
-      });
+        category: "material", chapter_id: uploadFolder,
+      }).select().single();
       if (error) throw error;
       toast.success("Arquivo enviado");
-      qc.invalidateQueries({ queryKey: ["cards", id] });
-      setTitle("");
+      await qc.invalidateQueries({ queryKey: ["cards", id] });
+      openNote((data as any).id);
       if (fileRef.current) fileRef.current.value = "";
     } catch (e: any) {
       toast.error(e.message);
@@ -339,294 +346,249 @@ function SubjectDetail() {
     }
   };
 
-  const chapterLabel = (chId: string | null) => {
-    if (!chId) return "Geral";
-    return chapters.find((c: any) => c.id === chId)?.title ?? "Capítulo";
-  };
+  const treeNotes: VaultNote[] = cards.map((c) => ({
+    id: c.id, title: c.title, chapter_id: c.chapter_id, content_type: c.content_type, file_mime: c.file_mime, file_name: c.file_name,
+  }));
+
+  const sidebar = (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex items-center gap-1 border-b border-border p-2">
+        <Button size="sm" variant="secondary" className="flex-1 gap-1.5" onClick={() => { setNewNoteFolder(null); setNewNoteTitle(""); setNewNoteText(""); }}>
+          <Plus className="size-4" />Nota
+        </Button>
+        <Button size="sm" variant="ghost" aria-label="Nova pasta na raiz" title="Nova pasta" onClick={() => setNewFolderParent(null)}><FolderPlus className="size-4" /></Button>
+        <Button size="sm" variant="ghost" aria-label="Adicionar link" title="Adicionar link" onClick={() => { setUploadFolder(null); setLinkOpen(true); }}><Link2 className="size-4" /></Button>
+        <Button size="sm" variant="ghost" aria-label="Enviar arquivo" title="Enviar arquivo" disabled={uploading} onClick={() => { setUploadFolder(null); fileRef.current?.click(); }}><Upload className="size-4" /></Button>
+      </div>
+      <div className="border-b border-border p-2">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar nas notas…" className="h-9 pl-8" />
+        </div>
+      </div>
+      <div className="min-h-0 flex-1 overflow-auto p-2">
+        {loadingFolders || loadingCards ? (
+          <div className="space-y-2">{[0, 1, 2, 3].map((i) => <div key={i} className="h-7 animate-pulse rounded bg-muted/60" />)}</div>
+        ) : searchResults ? (
+          searchResults.length === 0 ? <p className="px-2 py-6 text-center text-xs text-muted-foreground">Nada encontrado.</p> : (
+            <div className="space-y-0.5">
+              {searchResults.map((c) => (
+                <button key={c.id} onClick={() => openNote(c.id)} className={cn("flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted/60", activeId === c.id && "bg-primary/15 text-primary")}>
+                  <NoteIcon note={c as VaultNote} className="text-muted-foreground" />
+                  <span className="truncate">{noteLabel(c as VaultNote)}</span>
+                </button>
+              ))}
+            </div>
+          )
+        ) : (
+          <VaultTree
+            folders={folders as VaultFolder[]}
+            notes={treeNotes}
+            expanded={expanded}
+            activeNoteId={activeId}
+            onToggle={(fid) => setExpanded((e) => ({ ...e, [fid]: !e[fid] }))}
+            onOpenNote={openNote}
+            onNewNote={(fid) => { setNewNoteFolder(fid); setNewNoteTitle(""); setNewNoteText(""); }}
+            onNewFolder={(pid) => setNewFolderParent(pid)}
+            onRenameFolder={(f) => { setRenameFolder(f); setRenameTitle(f.title); }}
+            onDeleteFolder={(f) => { void (async () => { if (await confirmAction({ title: `Excluir "${f.title}"?`, description: "As subpastas serão excluídas e as notas ficarão na raiz." })) removeFolder.mutate(f.id); })(); }}
+            onDeleteNote={(n) => { void (async () => { if (await confirmAction({ title: `Excluir "${noteLabel(n)}"?`, description: "Esta ação não pode ser desfeita." })) removeNote.mutate(n.id); })(); }}
+          />
+        )}
+      </div>
+    </div>
+  );
 
   return (
-    <div className="max-w-5xl mx-auto">
-      <Link to="/subjects" className="text-sm text-muted-foreground inline-flex items-center gap-1 hover:text-foreground mb-4">
-        <ArrowLeft className="size-4" /> Voltar
-      </Link>
-      <div className="flex items-center gap-3 mb-6">
-        <div className="size-12 rounded-xl flex items-center justify-center" style={{ background: `${subject?.color ?? "#8b5cf6"}33` }}>
-          <FileText className="size-6" style={{ color: subject?.color ?? "#8b5cf6" }} />
+    <div className="mx-auto max-w-7xl">
+      <input
+        ref={fileRef}
+        type="file"
+        className="hidden"
+        accept="image/*,application/pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.zip,.rar,audio/*,video/*"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) void doUpload(f); }}
+      />
+
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Link to="/subjects" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="size-4" /> Voltar
+        </Link>
+        <div className="ml-auto flex items-center gap-2">
+          <Button size="sm" variant="secondary" className="lg:hidden" onClick={() => setSidebarOpen(true)}><PanelLeft className="mr-1.5 size-4" />Pastas</Button>
+          <Button size="sm" variant="secondary" onClick={() => { if (subject) { setEditSubjectName(subject.name); setEditSubjectColor(subject.color || "#8b5cf6"); setEditSubjectOpen(true); } }}>
+            <Pencil className="mr-1.5 size-4" />Editar matéria
+          </Button>
         </div>
-        <div className="flex-1">
-          <h1 className="text-2xl font-semibold">{subject?.name}</h1>
-          <p className="text-sm text-muted-foreground">{cards.length} conteúdo(s) · {chapters.length} capítulo(s)</p>
-        </div>
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={() => { if (subject) { setEditSubjectName(subject.name); setEditSubjectColor(subject.color || "#8b5cf6"); setEditSubjectOpen(true); } }}
-        ><Pencil className="size-4 mr-2" />Editar matéria</Button>
       </div>
 
-      {/* Chapters bar */}
-      <div className="glass-card p-4 mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <BookMarked className="size-4 text-primary" />
-          <h2 className="font-medium">Capítulos</h2>
-          <Dialog open={newChapterOpen} onOpenChange={setNewChapterOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" variant="secondary" className="ml-auto gap-1"><Plus className="size-4" />Novo capítulo</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Novo capítulo</DialogTitle>
-                <DialogDescription>Organize seus conteúdos por capítulo (ex.: Capítulo 8 — Proteínas).</DialogDescription>
-              </DialogHeader>
-              <Input value={newChapterTitle} onChange={(e) => setNewChapterTitle(e.target.value)} placeholder="Capítulo 8 — Proteínas" />
-              <DialogFooter>
-                <Button onClick={() => createChapter.mutate()} disabled={!newChapterTitle.trim() || createChapter.isPending}>Criar</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+      <div className="mb-4 flex items-center gap-3">
+        <div className="flex size-11 items-center justify-center rounded-xl" style={{ background: `${subject?.color ?? "#8b5cf6"}33` }}>
+          <FileText className="size-5" style={{ color: subject?.color ?? "#8b5cf6" }} />
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button onClick={() => setSelectedChapter("all")} className={`text-xs px-3 py-1.5 rounded-full border ${selectedChapter === "all" ? "bg-primary/20 border-primary/40 text-primary" : "bg-muted/40 border-border hover:bg-muted"}`}>Todos</button>
-          <button onClick={() => setSelectedChapter("none")} className={`text-xs px-3 py-1.5 rounded-full border ${selectedChapter === "none" ? "bg-primary/20 border-primary/40 text-primary" : "bg-muted/40 border-border hover:bg-muted"}`}>Sem capítulo</button>
-          {chapters.map((c: any) => (
-            <div key={c.id} className={`inline-flex items-center gap-1 rounded-full border pl-3 pr-2 py-1 ${selectedChapter === c.id ? "bg-primary/20 border-primary/40 text-primary" : "bg-muted/40 border-border"}`}>
-              <button type="button" onClick={() => setSelectedChapter(c.id)} className="text-xs">
-                {c.title}
-              </button>
-              <button
-                type="button"
-                onClick={() => { setEditingChapterId(c.id); setEditChapterTitle(c.title); }}
-                aria-label={`Editar capítulo ${c.title}`}
-                className="rounded p-0.5 opacity-70 transition hover:opacity-100 hover:text-primary"
-              >
-                <Pencil className="size-3" />
-              </button>
-              <button
-                type="button"
-                onClick={() => { void (async () => { if (await confirmAction({ title: `Excluir "${c.title}"?`, description: "Os conteúdos ficarão sem capítulo." })) removeChapter.mutate(c.id); })(); }}
-                aria-label={`Excluir capítulo ${c.title}`}
-                className="rounded p-0.5 opacity-70 transition hover:opacity-100 hover:text-destructive"
-              >
-                <Trash2 className="size-3" />
-              </button>
+        <div className="min-w-0">
+          <h1 className="truncate text-2xl font-semibold">{subject?.name ?? "Matéria"}</h1>
+          <p className="text-sm text-muted-foreground">{cards.length} nota(s) · {folders.length} pasta(s)</p>
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[272px_minmax(0,1fr)]">
+        <aside className="glass-card hidden max-h-[75vh] overflow-hidden lg:block">{sidebar}</aside>
+
+        <section className="glass-card flex min-h-[60vh] flex-col overflow-hidden">
+          {/* tabs */}
+          <div className="flex items-center gap-1 overflow-x-auto border-b border-border bg-muted/20 px-2 py-1.5">
+            {openTabs.length === 0 ? (
+              <span className="px-2 py-1 text-xs text-muted-foreground">Nenhuma nota aberta</span>
+            ) : openTabs.map((tabId) => {
+              const card = cards.find((c) => c.id === tabId);
+              if (!card) return null;
+              const active = tabId === activeId;
+              return (
+                <div key={tabId} className={cn("group flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1", active ? "border-primary/40 bg-primary/15 text-primary" : "border-transparent bg-muted/40 hover:bg-muted")}>
+                  <button type="button" onClick={() => setActiveId(tabId)} className="flex max-w-[160px] items-center gap-1.5 text-xs">
+                    <NoteIcon note={card as VaultNote} className={cn("size-3.5", active ? "text-primary" : "text-muted-foreground")} />
+                    <span className="truncate">{noteLabel(card as VaultNote)}</span>
+                  </button>
+                  <button type="button" aria-label={`Fechar ${noteLabel(card as VaultNote)}`} onClick={() => closeTab(tabId)} className="rounded p-0.5 text-muted-foreground hover:text-foreground">
+                    <X className="size-3.5" />
+                  </button>
+                </div>
+              );
+            })}
+            {openTabs.length > 1 && (
+              <button type="button" onClick={() => { setOpenTabs([]); setActiveId(null); }} className="ml-auto shrink-0 px-2 text-xs text-muted-foreground hover:text-foreground">Fechar todas</button>
+            )}
+          </div>
+
+          {activeNote ? (
+            <NoteView
+              key={activeNote.id}
+              note={activeNote}
+              folders={folders as VaultFolder[]}
+              wikiNotes={wikiNotes}
+              backlinks={backlinks}
+              onOpenNote={openNote}
+              saving={updateNote.isPending}
+              onSave={(patch) => updateNote.mutate({ id: activeNote.id, ...patch })}
+            />
+          ) : (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 p-10 text-center">
+              <FileText className="size-8 text-muted-foreground" />
+              <p className="font-medium">Sua área de estudos desta matéria</p>
+              <p className="max-w-sm text-sm text-muted-foreground">
+                Crie pastas e notas na barra lateral. Abra várias notas em abas e conecte-as com <code className="text-primary">[[nome da nota]]</code>.
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button size="sm" variant="secondary" className="lg:hidden" onClick={() => setSidebarOpen(true)}><PanelLeft className="mr-1.5 size-4" />Abrir pastas</Button>
+                <Button size="sm" onClick={() => { setNewNoteFolder(null); setNewNoteTitle(""); setNewNoteText(""); }}><Plus className="mr-1.5 size-4" />Nova nota</Button>
+              </div>
             </div>
-          ))}
-        </div>
+          )}
+        </section>
       </div>
 
-      <div className="glass-card p-5 mb-8">
-        <h2 className="font-medium mb-1">Adicionar conteúdo</h2>
-        <p className="text-xs text-muted-foreground mb-4">
-          Vai para: <span className="text-foreground">{chapterLabel(targetChapterId)}</span>
-        </p>
-        <div className="space-y-3">
-          <div className="grid sm:grid-cols-2 gap-3">
-            <div className="space-y-2"><Label>Título (opcional)</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Resumo da aula 3..." /></div>
+      {/* mobile sidebar */}
+      <Dialog open={sidebarOpen} onOpenChange={setSidebarOpen}>
+        <DialogContent className="max-w-md p-0">
+          <DialogHeader className="px-4 pt-4"><DialogTitle>Pastas e notas</DialogTitle></DialogHeader>
+          <div className="h-[70vh]">{sidebar}</div>
+        </DialogContent>
+      </Dialog>
+
+      {/* new folder */}
+      <Dialog open={newFolderParent !== undefined} onOpenChange={(o) => { if (!o) { setNewFolderParent(undefined); setNewFolderTitle(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nova pasta</DialogTitle>
+            <DialogDescription>
+              {newFolderParent ? `Dentro de "${(folders as VaultFolder[]).find((f) => f.id === newFolderParent)?.title ?? ""}"` : "Na raiz da matéria"}
+            </DialogDescription>
+          </DialogHeader>
+          <Input autoFocus value={newFolderTitle} onChange={(e) => setNewFolderTitle(e.target.value)} placeholder="Ex.: Aulas, Atividades, Resumos" />
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => { setNewFolderParent(undefined); setNewFolderTitle(""); }}>Cancelar</Button>
+            <Button onClick={() => createFolder.mutate()} disabled={!newFolderTitle.trim() || createFolder.isPending}>Criar pasta</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* rename folder */}
+      <Dialog open={!!renameFolder} onOpenChange={(o) => { if (!o) setRenameFolder(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Renomear pasta</DialogTitle></DialogHeader>
+          <Input value={renameTitle} onChange={(e) => setRenameTitle(e.target.value)} />
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setRenameFolder(null)}>Cancelar</Button>
+            <Button onClick={() => updateFolder.mutate()} disabled={!renameTitle.trim() || updateFolder.isPending}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* new note */}
+      <Dialog open={newNoteFolder !== undefined} onOpenChange={(o) => { if (!o) setNewNoteFolder(undefined); }}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Nova nota</DialogTitle>
+            <DialogDescription>
+              {newNoteFolder ? `Dentro de "${(folders as VaultFolder[]).find((f) => f.id === newNoteFolder)?.title ?? ""}"` : "Na raiz da matéria"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-2"><Label>Título</Label><Input autoFocus value={newNoteTitle} onChange={(e) => setNewNoteTitle(e.target.value)} placeholder="Aula 3 — Proteínas" /></div>
             <div className="space-y-2">
               <Label>Categoria</Label>
-              <Select value={category} onValueChange={setCategory}>
+              <Select value={newNoteCategory} onValueChange={setNewNoteCategory}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Conteúdo (Markdown)</Label>
+              <Textarea value={newNoteText} onChange={(e) => setNewNoteText(e.target.value)} rows={8} className="font-mono text-sm" placeholder={"# Título\n- ponto importante\n[[outra nota]]"} />
+            </div>
+            {newNoteText.trim() && (
+              <div className="rounded-lg border border-border p-3">
+                <p className="mb-2 text-xs text-muted-foreground">Pré-visualização</p>
+                <Markdown compact>{newNoteText}</Markdown>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setNewNoteFolder(undefined)}>Cancelar</Button>
+            <Button onClick={() => createNote.mutate()} disabled={createNote.isPending || (!newNoteTitle.trim() && !newNoteText.trim())}>Criar nota</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* link */}
+      <Dialog open={linkOpen} onOpenChange={setLinkOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adicionar link</DialogTitle>
+            <DialogDescription>YouTube, Google Drive, artigos ou qualquer página.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-2"><Label>Título (opcional)</Label><Input value={linkTitle} onChange={(e) => setLinkTitle(e.target.value)} placeholder="Videoaula sobre proteínas" /></div>
+            <div className="space-y-2"><Label>URL</Label><Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://youtube.com/..." /></div>
+            <div className="space-y-2">
+              <Label>Pasta</Label>
+              <Select value={uploadFolder ?? "root"} onValueChange={(v) => setUploadFolder(v === "root" ? null : v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                  <SelectItem value="root">Raiz</SelectItem>
+                  {(folders as VaultFolder[]).map((f) => <SelectItem key={f.id} value={f.id}>{f.title}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
           </div>
-          <Tabs defaultValue="type">
-            <TabsList className="grid h-auto grid-cols-2 gap-1 sm:grid-cols-4">
-              <TabsTrigger value="type"><TypeIcon className="size-4 mr-2 shrink-0" />Digitar</TabsTrigger>
-              <TabsTrigger value="paste"><ClipboardPaste className="size-4 mr-2 shrink-0" />Colar</TabsTrigger>
-              <TabsTrigger value="link"><Link2 className="size-4 mr-2 shrink-0" />Link</TabsTrigger>
-              <TabsTrigger value="upload"><Upload className="size-4 mr-2 shrink-0" />Upload</TabsTrigger>
-            </TabsList>
-            <TabsContent value="type" className="space-y-3 pt-3">
-              <Textarea ref={textRef} value={text} onChange={(e) => setText(e.target.value)} placeholder={"Escreva em Markdown (estilo Obsidian)...\n\n# Título\n**negrito**  *itálico*  ==destaque==\n- lista\n- [ ] tarefa\n> citação\n`código`"} rows={8} className="font-mono text-sm" />
-              {textSuggestions.length > 0 && (
-                <div className="rounded-lg border border-primary/30 bg-background p-2 shadow-sm">
-                  <p className="px-2 pb-1 text-xs text-muted-foreground">Vincular nota</p>
-                  {textSuggestions.map((note) => <button key={note.id} type="button" onClick={() => insertWikiLink(note)} className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-muted"><span className="text-primary">[[</span>{note.title}<span className="text-primary">]]</span></button>)}
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">Suporta Markdown e conexões de notas: digite <code className="text-primary">[[nome da nota]]</code> para criar um vínculo.</p>
-              <Button onClick={() => addText.mutate()} disabled={!text || addText.isPending}>Salvar texto</Button>
-            </TabsContent>
-            <TabsContent value="paste" className="space-y-3 pt-3">
-              <Textarea ref={textRef} value={text} onChange={(e) => setText(e.target.value)} placeholder="Cole o conteúdo aqui (Ctrl+V)... Markdown suportado." rows={8} className="font-mono text-sm" />
-              {textSuggestions.length > 0 && (
-                <div className="rounded-lg border border-primary/30 bg-background p-2 shadow-sm">
-                  <p className="px-2 pb-1 text-xs text-muted-foreground">Vincular nota</p>
-                  {textSuggestions.map((note) => <button key={note.id} type="button" onClick={() => insertWikiLink(note)} className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-muted"><span className="text-primary">[[</span>{note.title}<span className="text-primary">]]</span></button>)}
-                </div>
-              )}
-              <Button onClick={() => addText.mutate()} disabled={!text || addText.isPending}>Salvar conteúdo</Button>
-            </TabsContent>
-            <TabsContent value="link" className="space-y-3 pt-3">
-              <div className="grid sm:grid-cols-[1fr_180px] gap-3">
-                <div className="space-y-2">
-                  <Label>URL</Label>
-                  <Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://youtube.com/... ou drive.google.com/..." />
-                </div>
-                <div className="space-y-2">
-                  <Label>Tipo</Label>
-                  <Select value={linkKind} onValueChange={(v) => setLinkKind(v as any)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="generic">Detectar / Outro</SelectItem>
-                      <SelectItem value="youtube">Vídeo (YouTube)</SelectItem>
-                      <SelectItem value="drive">Google Drive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <Button onClick={() => addLink.mutate()} disabled={!linkUrl.trim() || addLink.isPending}>Salvar link</Button>
-              <p className="text-xs text-muted-foreground">Cole links do YouTube, Google Drive, artigos ou qualquer página.</p>
-            </TabsContent>
-            <TabsContent value="upload" className="space-y-3 pt-3">
-              <Input ref={fileRef} type="file" accept="image/*,application/pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.zip,.rar,audio/*,video/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile(f); }} disabled={uploading} />
-              <p className="text-xs text-muted-foreground">Aceita prints, PDFs, documentos (Word, PowerPoint, Excel), áudios e vídeos.</p>
-            </TabsContent>
-          </Tabs>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3 mb-3">
-        <h2 className="font-medium">Conteúdos</h2>
-        <div className="ml-auto flex gap-1 flex-wrap">
-          <button onClick={() => setFilterCategory("all")} className={`text-xs px-2 py-1 rounded-md ${filterCategory === "all" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:bg-muted"}`}>Todos</button>
-          {CATEGORIES.map((c) => (
-            <button key={c.value} onClick={() => setFilterCategory(c.value)} className={`text-xs px-2 py-1 rounded-md ${filterCategory === c.value ? "bg-primary/20 text-primary" : "text-muted-foreground hover:bg-muted"}`}>{c.label}</button>
-          ))}
-        </div>
-      </div>
-      {filteredCards.length === 0 ? (
-        <p className="text-sm text-muted-foreground glass-card p-8 text-center">Nada por aqui ainda.</p>
-      ) : (
-        <div className="grid sm:grid-cols-2 gap-3">
-          {filteredCards.map((c: any) => (
-            <div
-              key={c.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => setViewing(c)}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setViewing(c); } }}
-              className="glass-card p-4 group relative text-left cursor-pointer transition hover:border-primary/40 hover:bg-accent/30 focus:outline-none focus:ring-2 focus:ring-primary/50"
-            >
-              <div className="flex items-start gap-2 mb-2">
-                {c.content_type === "link"
-                  ? (c.file_mime === "youtube" ? <Youtube className="size-4 text-primary mt-1 shrink-0" /> : c.file_mime === "drive" ? <HardDrive className="size-4 text-primary mt-1 shrink-0" /> : <Link2 className="size-4 text-primary mt-1 shrink-0" />)
-                  : c.content_type === "file"
-                  ? (c.file_mime?.startsWith("image/") ? <ImageIcon className="size-4 text-primary mt-1 shrink-0" /> : c.file_mime === "application/pdf" ? <FileType2 className="size-4 text-primary mt-1 shrink-0" /> : <FileDown className="size-4 text-primary mt-1 shrink-0" />)
-                  : <FileText className="size-4 text-primary mt-1 shrink-0" />}
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{c.title ?? (c.content_type === "file" ? c.file_name : "Anotação")}</p>
-                  <p className="text-xs text-muted-foreground">{format(new Date(c.created_at), "d MMM yyyy 'às' HH:mm", { locale: ptBR })}</p>
-                  <div className="flex gap-1 mt-1 flex-wrap">
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted/60 border">{chapterLabel(c.chapter_id)}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">{CATEGORIES.find((x) => x.value === c.category)?.label ?? c.category}</span>
-                  </div>
-                </div>
-                <div className="flex gap-1.5 shrink-0">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setEditingCardId(c.id); setEditCardTitle(c.title || ""); setEditCardText(c.text_content || ""); setEditCardCategory(c.category || "anotacao"); setEditCardChapter(c.chapter_id); }}
-                    className="rounded-md p-1 text-muted-foreground transition hover:text-primary md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
-                    aria-label="Editar conteúdo"
-                  >
-                    <Pencil className="size-4" />
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); void (async () => { if (await confirmAction({ title: "Excluir conteúdo", description: "Esta ação não pode ser desfeita." })) remove.mutate(c.id); })(); }}
-                    className="rounded-md p-1 text-muted-foreground transition hover:text-destructive md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
-                    aria-label="Excluir conteúdo"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                </div>
-              </div>
-              {c.content_type === "text" ? (
-                <div className="line-clamp-4 text-muted-foreground"><Markdown compact wikiNotes={wikiNotes} onWikiLinkClick={(note) => setViewing(cards.find((card: any) => card.id === note.id) ?? null)}>{c.text_content ?? ""}</Markdown></div>
-              ) : c.content_type === "link" ? (
-                <p className="text-xs text-primary truncate">{c.text_content}</p>
-              ) : (
-                <p className="text-xs text-primary">Clique para visualizar</p>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      <Dialog open={!!viewing} onOpenChange={(o) => !o && setViewing(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="pr-8">
-              {viewing?.title ?? (viewing?.content_type === "file" ? viewing?.file_name : "Anotação")}
-            </DialogTitle>
-            <DialogDescription>
-              {viewing && format(new Date(viewing.created_at), "d 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="overflow-auto flex-1 -mx-6 px-6">
-            {viewing?.content_type === "text" ? (
-              <Markdown wikiNotes={wikiNotes} onWikiLinkClick={(note) => setViewing(cards.find((card: any) => card.id === note.id) ?? null)}>{viewing.text_content ?? ""}</Markdown>
-            ) : viewing?.content_type === "file" ? (
-              !viewUrl ? (
-                <p className="text-sm text-muted-foreground text-center py-12">Carregando…</p>
-              ) : viewing.file_mime?.startsWith("image/") ? (
-                <img src={viewUrl} alt={viewing.file_name ?? ""} className="w-full h-auto rounded-lg" />
-              ) : viewing.file_mime === "application/pdf" ? (
-                <iframe src={viewUrl} title={viewing.file_name ?? "PDF"} className="w-full h-[70vh] rounded-lg border border-border" />
-              ) : (
-                <div className="text-center py-12 space-y-3">
-                  <p className="text-sm text-muted-foreground">Pré-visualização não disponível para este tipo.</p>
-                  <Button asChild variant="secondary"><a href={viewUrl} target="_blank" rel="noreferrer"><ExternalLink className="size-4 mr-2" />Abrir em nova aba</a></Button>
-                </div>
-              )
-            ) : viewing?.content_type === "link" ? (
-              (() => {
-                const url: string = viewing.text_content ?? "";
-                const kind = viewing.file_mime;
-                let embed: string | null = null;
-                if (kind === "youtube") {
-                  const m = url.match(/(?:youtu\.be\/|v=|shorts\/|embed\/)([\w-]{11})/);
-                  if (m) embed = `https://www.youtube.com/embed/${m[1]}`;
-                } else if (kind === "drive") {
-                  const m = url.match(/\/d\/([\w-]+)/);
-                  if (m) embed = `https://drive.google.com/file/d/${m[1]}/preview`;
-                }
-                return embed ? (
-                  <iframe src={embed} title={viewing.title ?? "Link"} className="w-full h-[70vh] rounded-lg border border-border" allow="autoplay; fullscreen" />
-                ) : (
-                  <div className="text-center py-12 space-y-3">
-                    <p className="text-sm text-muted-foreground break-all">{url}</p>
-                    <Button asChild variant="secondary"><a href={url} target="_blank" rel="noreferrer"><ExternalLink className="size-4 mr-2" />Abrir link</a></Button>
-                  </div>
-                );
-              })()
-            ) : null}
-          </div>
-          {viewing?.content_type === "text" && viewing.title && (
-            <div className="border-t border-border pt-4">
-              <h3 className="text-sm font-medium mb-2">Notas que mencionam esta nota</h3>
-              {backlinks.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma conexão encontrada ainda.</p> : (
-                <div className="flex flex-wrap gap-2">
-                  {backlinks.map((card: any) => <Button key={card.id} variant="secondary" size="sm" onClick={() => setViewing(card)}><Link2 className="size-3.5 mr-1.5" />{card.title ?? "Anotação"}</Button>)}
-                </div>
-              )}
-            </div>
-          )}
-          {viewing?.content_type === "link" && viewing.text_content && (
-            <div className="pt-2 border-t border-border flex justify-end">
-              <Button asChild variant="ghost" size="sm"><a href={viewing.text_content} target="_blank" rel="noreferrer"><ExternalLink className="size-4 mr-2" />Abrir em nova aba</a></Button>
-            </div>
-          )}
-          {viewing?.content_type === "file" && viewUrl && (
-            <div className="pt-2 border-t border-border flex justify-end">
-              <Button asChild variant="ghost" size="sm"><a href={viewUrl} target="_blank" rel="noreferrer"><ExternalLink className="size-4 mr-2" />Abrir em nova aba</a></Button>
-            </div>
-          )}
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setLinkOpen(false)}>Cancelar</Button>
+            <Button onClick={() => createLink.mutate()} disabled={!linkUrl.trim() || createLink.isPending}>Salvar link</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Subject Dialog */}
+      {/* edit subject */}
       <Dialog open={editSubjectOpen} onOpenChange={setEditSubjectOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Editar matéria</DialogTitle></DialogHeader>
@@ -641,62 +603,6 @@ function SubjectDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Chapter Dialog */}
-      <Dialog open={!!editingChapterId} onOpenChange={(o) => { if (!o) { setEditingChapterId(null); setEditChapterTitle(""); } }}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Editar capítulo</DialogTitle></DialogHeader>
-          <div className="space-y-2"><Label>Título</Label><Input value={editChapterTitle} onChange={(e) => setEditChapterTitle(e.target.value)} /></div>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => { setEditingChapterId(null); setEditChapterTitle(""); }}>Cancelar</Button>
-            <Button onClick={() => updateChapter.mutate()} disabled={!editChapterTitle.trim() || updateChapter.isPending}>Salvar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Card Dialog */}
-      <Dialog open={!!editingCardId} onOpenChange={(o) => { if (!o) setEditingCardId(null); }}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader><DialogTitle>Editar conteúdo</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2"><Label>Título</Label><Input value={editCardTitle} onChange={(e) => setEditCardTitle(e.target.value)} placeholder="Título do conteúdo" /></div>
-            <div className="grid sm:grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Categoria</Label>
-                <Select value={editCardCategory} onValueChange={setEditCardCategory}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Capítulo</Label>
-                <Select value={editCardChapter ?? "none"} onValueChange={(v) => setEditCardChapter(v === "none" ? null : v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Geral (sem capítulo)</SelectItem>
-                    {chapters.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Texto (Markdown)</Label>
-              <Textarea ref={editTextRef} value={editCardText} onChange={(e) => setEditCardText(e.target.value)} placeholder="Conteúdo em Markdown..." rows={8} className="font-mono text-sm" />
-              {editSuggestions.length > 0 && (
-                <div className="rounded-lg border border-primary/30 bg-background p-2 shadow-sm">
-                  <p className="px-2 pb-1 text-xs text-muted-foreground">Vincular nota</p>
-                  {editSuggestions.map((note) => <button key={note.id} type="button" onClick={() => insertWikiLink(note, true)} className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-muted"><span className="text-primary">[[</span>{note.title}<span className="text-primary">]]</span></button>)}
-                </div>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setEditingCardId(null)}>Cancelar</Button>
-            <Button onClick={() => updateCard.mutate()} disabled={updateCard.isPending}>Salvar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
       {confirmDialog}
     </div>
   );
