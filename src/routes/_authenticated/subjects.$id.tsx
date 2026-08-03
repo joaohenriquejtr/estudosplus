@@ -46,6 +46,7 @@ const safeStorageFileName = (fileName: string) => {
 };
 
 function SubjectDetail() {
+  const { confirm: confirmAction, confirmDialog } = useConfirm();
   const { id } = Route.useParams();
   const { note: noteId } = Route.useSearch();
   const qc = useQueryClient();
