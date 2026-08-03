@@ -31,7 +31,7 @@ export const Route = createFileRoute("/_authenticated/subjects/$id")({
   validateSearch: (search: Record<string, unknown>): { note?: string } => (
     typeof search.note === "string" ? { note: search.note } : {}
   ),
-  component: SubjectVault;
+  component: SubjectVault,
 });
 
 const safeStorageFileName = (fileName: string) => {
