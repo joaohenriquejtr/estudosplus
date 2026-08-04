@@ -409,32 +409,31 @@ function SubjectVault() {
         onChange={(e) => { const f = e.target.files?.[0]; if (f) void doUpload(f); }}
       />
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <Link to="/subjects" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-4" /> Voltar
+      <div className="mb-3 flex items-center gap-2">
+        <Button
+          size="sm"
+          variant="secondary"
+          aria-label={sidebarCollapsed ? "Mostrar pastas" : "Ocultar pastas"}
+          title={sidebarCollapsed ? "Mostrar pastas" : "Ocultar pastas"}
+          onClick={() => { setSidebarCollapsed((v) => !v); setSidebarOpen(true); }}
+          className="shrink-0"
+        >
+          <PanelLeft className="size-4" />
+        </Button>
+        <span className="size-2.5 shrink-0 rounded-full" style={{ background: subject?.color ?? "#8b5cf6" }} />
+        <h1 className="min-w-0 flex-1 truncate text-base font-semibold">{subject?.name ?? "Matéria"}</h1>
+        <Button size="sm" variant="ghost" aria-label="Editar matéria" title="Editar matéria" onClick={() => { if (subject) { setEditSubjectName(subject.name); setEditSubjectColor(subject.color || "#8b5cf6"); setEditSubjectOpen(true); } }}>
+          <Pencil className="size-4" />
+        </Button>
+        <Link to="/subjects" className="inline-flex shrink-0 items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="size-4" /><span className="hidden sm:inline">Voltar</span>
         </Link>
-        <div className="ml-auto flex items-center gap-2">
-          <Button size="sm" variant="secondary" className="lg:hidden" onClick={() => setSidebarOpen(true)}><PanelLeft className="mr-1.5 size-4" />Pastas</Button>
-          <Button size="sm" variant="secondary" onClick={() => { if (subject) { setEditSubjectName(subject.name); setEditSubjectColor(subject.color || "#8b5cf6"); setEditSubjectOpen(true); } }}>
-            <Pencil className="mr-1.5 size-4" />Editar matéria
-          </Button>
-        </div>
       </div>
 
-      <div className="mb-4 flex items-center gap-3">
-        <div className="flex size-11 items-center justify-center rounded-xl" style={{ background: `${subject?.color ?? "#8b5cf6"}33` }}>
-          <FileText className="size-5" style={{ color: subject?.color ?? "#8b5cf6" }} />
-        </div>
-        <div className="min-w-0">
-          <h1 className="truncate text-2xl font-semibold">{subject?.name ?? "Matéria"}</h1>
-          <p className="text-sm text-muted-foreground">{cards.length} nota(s) · {folders.length} pasta(s)</p>
-        </div>
-      </div>
+      <div className={cn("grid gap-4", sidebarCollapsed ? "lg:grid-cols-[minmax(0,1fr)]" : "lg:grid-cols-[272px_minmax(0,1fr)]")}>
+        <aside className={cn("glass-card max-h-[78vh] overflow-hidden", sidebarCollapsed ? "hidden" : "hidden lg:block")}>{sidebar}</aside>
 
-      <div className="grid gap-4 lg:grid-cols-[272px_minmax(0,1fr)]">
-        <aside className="glass-card hidden max-h-[75vh] overflow-hidden lg:block">{sidebar}</aside>
-
-        <section className="glass-card flex min-h-[60vh] flex-col overflow-hidden">
+        <section className="glass-card flex min-h-[70vh] flex-col overflow-hidden">
           {/* tabs */}
           <div className="flex items-center gap-1 overflow-x-auto border-b border-border bg-muted/20 px-2 py-1.5">
             {openTabs.length === 0 ? (
@@ -449,16 +448,16 @@ function SubjectVault() {
                     <NoteIcon note={card as VaultNote} className={cn("size-3.5", active ? "text-primary" : "text-muted-foreground")} />
                     <span className="truncate">{noteLabel(card as VaultNote)}</span>
                   </button>
-                  <button type="button" aria-label={`Fechar ${noteLabel(card as VaultNote)}`} onClick={() => closeTab(tabId)} className="rounded p-0.5 text-muted-foreground hover:text-foreground">
-                    <X className="size-3.5" />
-                  </button>
+                  {openTabs.length > 1 && (
+                    <button type="button" aria-label={`Fechar ${noteLabel(card as VaultNote)}`} onClick={() => closeTab(tabId)} className="rounded p-0.5 text-muted-foreground hover:text-foreground">
+                      <X className="size-3.5" />
+                    </button>
+                  )}
                 </div>
               );
             })}
-            {openTabs.length > 1 && (
-              <button type="button" onClick={() => { setOpenTabs([]); setActiveId(null); }} className="ml-auto shrink-0 px-2 text-xs text-muted-foreground hover:text-foreground">Fechar todas</button>
-            )}
           </div>
+
 
           {activeNote ? (
             <NoteView
