@@ -361,6 +361,48 @@ function SubjectVault() {
         <Button size="sm" variant="ghost" aria-label="Adicionar link" title="Adicionar link" onClick={() => { setUploadFolder(null); setLinkOpen(true); }}><Link2 className="size-4" /></Button>
         <Button size="sm" variant="ghost" aria-label="Enviar arquivo" title="Enviar arquivo" disabled={uploading} onClick={() => { setUploadFolder(null); fileRef.current?.click(); }}><Upload className="size-4" /></Button>
       </div>
+
+      {openTabs.length > 0 && (
+        <div className="border-b border-border p-2">
+          <p className="px-1 pb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Abas abertas</p>
+          <div className="max-h-40 space-y-0.5 overflow-auto">
+            {openTabs.map((tabId) => {
+              const card = cards.find((c) => c.id === tabId);
+              if (!card) return null;
+              const active = tabId === activeId;
+              return (
+                <div
+                  key={tabId}
+                  className={cn(
+                    "group flex animate-in items-center gap-1 rounded-md pr-1 fade-in slide-in-from-left-2 duration-200",
+                    active ? "bg-primary/15 text-primary" : "hover:bg-muted/60",
+                  )}
+                >
+                  <button
+                    type="button"
+                    onClick={() => { setActiveId(tabId); setSidebarOpen(false); }}
+                    className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-left text-sm transition-colors"
+                  >
+                    <NoteIcon note={card as VaultNote} className={active ? "text-primary" : "text-muted-foreground"} />
+                    <span className="truncate">{noteLabel(card as VaultNote)}</span>
+                  </button>
+                  {openTabs.length > 1 && (
+                    <button
+                      type="button"
+                      aria-label={`Fechar ${noteLabel(card as VaultNote)}`}
+                      onClick={() => closeTab(tabId)}
+                      className="rounded p-1 text-muted-foreground transition hover:text-foreground md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="border-b border-border p-2">
         <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -399,6 +441,7 @@ function SubjectVault() {
       </div>
     </div>
   );
+
 
   return (
     <div className="mx-auto max-w-7xl">
