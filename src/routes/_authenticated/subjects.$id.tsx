@@ -511,13 +511,27 @@ function SubjectVault() {
         </section>
       </div>
 
-      {/* mobile sidebar */}
-      <Dialog open={sidebarOpen} onOpenChange={setSidebarOpen}>
-        <DialogContent className="max-w-md p-0">
-          <DialogHeader className="px-4 pt-4"><DialogTitle>Pastas e notas</DialogTitle></DialogHeader>
-          <div className="h-[70vh]">{sidebar}</div>
-        </DialogContent>
-      </Dialog>
+      {/* mobile sidebar — painel deslizante */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            aria-label="Fechar pastas"
+            onClick={() => setSidebarOpen(false)}
+            className="absolute inset-0 animate-in bg-background/70 backdrop-blur-sm fade-in duration-200"
+          />
+          <div className="absolute inset-y-0 left-0 flex w-[86%] max-w-xs animate-in flex-col border-r border-border bg-card shadow-2xl slide-in-from-left duration-300">
+            <div className="flex items-center justify-between border-b border-border px-3 py-2">
+              <span className="text-sm font-medium">Pastas e notas</span>
+              <button type="button" aria-label="Fechar" onClick={() => setSidebarOpen(false)} className="rounded p-1 text-muted-foreground transition hover:text-foreground">
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="min-h-0 flex-1">{sidebar}</div>
+          </div>
+        </div>
+      )}
+
 
       {/* new folder */}
       <Dialog open={newFolderParent !== undefined} onOpenChange={(o) => { if (!o) { setNewFolderParent(undefined); setNewFolderTitle(""); } }}>
