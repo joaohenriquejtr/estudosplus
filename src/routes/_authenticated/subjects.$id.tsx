@@ -416,9 +416,12 @@ function SubjectVault() {
           variant="secondary"
           aria-label={sidebarCollapsed ? "Mostrar pastas" : "Ocultar pastas"}
           title={sidebarCollapsed ? "Mostrar pastas" : "Ocultar pastas"}
-          onClick={() => { setSidebarCollapsed((v) => !v); setSidebarOpen(true); }}
-          className="shrink-0"
+          onClick={() => setSidebarCollapsed((v) => !v)}
+          className="hidden shrink-0 lg:inline-flex"
         >
+          <PanelLeft className="size-4" />
+        </Button>
+        <Button size="sm" variant="secondary" aria-label="Pastas e notas" title="Pastas e notas" onClick={() => setSidebarOpen(true)} className="shrink-0 lg:hidden">
           <PanelLeft className="size-4" />
         </Button>
         <span className="size-2.5 shrink-0 rounded-full" style={{ background: subject?.color ?? "#8b5cf6" }} />
