@@ -481,29 +481,7 @@ function SubjectVault() {
         <aside className={cn("glass-card max-h-[78vh] overflow-hidden", sidebarCollapsed ? "hidden" : "hidden lg:block")}>{sidebar}</aside>
 
         <section className="glass-card flex min-h-[70vh] flex-col overflow-hidden">
-          {/* tabs */}
-          <div className="flex items-center gap-1 overflow-x-auto border-b border-border bg-muted/20 px-2 py-1.5">
-            {openTabs.length === 0 ? (
-              <span className="px-2 py-1 text-xs text-muted-foreground">Nenhuma nota aberta</span>
-            ) : openTabs.map((tabId) => {
-              const card = cards.find((c) => c.id === tabId);
-              if (!card) return null;
-              const active = tabId === activeId;
-              return (
-                <div key={tabId} className={cn("group flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1", active ? "border-primary/40 bg-primary/15 text-primary" : "border-transparent bg-muted/40 hover:bg-muted")}>
-                  <button type="button" onClick={() => setActiveId(tabId)} className="flex max-w-[160px] items-center gap-1.5 text-xs">
-                    <NoteIcon note={card as VaultNote} className={cn("size-3.5", active ? "text-primary" : "text-muted-foreground")} />
-                    <span className="truncate">{noteLabel(card as VaultNote)}</span>
-                  </button>
-                  {openTabs.length > 1 && (
-                    <button type="button" aria-label={`Fechar ${noteLabel(card as VaultNote)}`} onClick={() => closeTab(tabId)} className="rounded p-0.5 text-muted-foreground hover:text-foreground">
-                      <X className="size-3.5" />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+
 
 
           {activeNote ? (
