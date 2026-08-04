@@ -60,6 +60,7 @@ function SubjectVault() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [search, setSearch] = useState("");
 
   const [newFolderParent, setNewFolderParent] = useState<string | null | undefined>(undefined);
