@@ -361,6 +361,48 @@ function SubjectVault() {
         <Button size="sm" variant="ghost" aria-label="Adicionar link" title="Adicionar link" onClick={() => { setUploadFolder(null); setLinkOpen(true); }}><Link2 className="size-4" /></Button>
         <Button size="sm" variant="ghost" aria-label="Enviar arquivo" title="Enviar arquivo" disabled={uploading} onClick={() => { setUploadFolder(null); fileRef.current?.click(); }}><Upload className="size-4" /></Button>
       </div>
+
+      {openTabs.length > 0 && (
+        <div className="border-b border-border p-2">
+          <p className="px-1 pb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Abas abertas</p>
+          <div className="max-h-40 space-y-0.5 overflow-auto">
+            {openTabs.map((tabId) => {
+              const card = cards.find((c) => c.id === tabId);
+              if (!card) return null;
+              const active = tabId === activeId;
+              return (
+                <div
+                  key={tabId}
+                  className={cn(
+                    "group flex animate-in items-center gap-1 rounded-md pr-1 fade-in slide-in-from-left-2 duration-200",
+                    active ? "bg-primary/15 text-primary" : "hover:bg-muted/60",
+                  )}
+                >
+                  <button
+                    type="button"
+                    onClick={() => { setActiveId(tabId); setSidebarOpen(false); }}
+                    className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-left text-sm transition-colors"
+                  >
+                    <NoteIcon note={card as VaultNote} className={active ? "text-primary" : "text-muted-foreground"} />
+                    <span className="truncate">{noteLabel(card as VaultNote)}</span>
+                  </button>
+                  {openTabs.length > 1 && (
+                    <button
+                      type="button"
+                      aria-label={`Fechar ${noteLabel(card as VaultNote)}`}
+                      onClick={() => closeTab(tabId)}
+                      className="rounded p-1 text-muted-foreground transition hover:text-foreground md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="border-b border-border p-2">
         <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -400,6 +442,7 @@ function SubjectVault() {
     </div>
   );
 
+
   return (
     <div className="mx-auto max-w-7xl">
       <input
@@ -438,29 +481,7 @@ function SubjectVault() {
         <aside className={cn("glass-card max-h-[78vh] overflow-hidden", sidebarCollapsed ? "hidden" : "hidden lg:block")}>{sidebar}</aside>
 
         <section className="glass-card flex min-h-[70vh] flex-col overflow-hidden">
-          {/* tabs */}
-          <div className="flex items-center gap-1 overflow-x-auto border-b border-border bg-muted/20 px-2 py-1.5">
-            {openTabs.length === 0 ? (
-              <span className="px-2 py-1 text-xs text-muted-foreground">Nenhuma nota aberta</span>
-            ) : openTabs.map((tabId) => {
-              const card = cards.find((c) => c.id === tabId);
-              if (!card) return null;
-              const active = tabId === activeId;
-              return (
-                <div key={tabId} className={cn("group flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1", active ? "border-primary/40 bg-primary/15 text-primary" : "border-transparent bg-muted/40 hover:bg-muted")}>
-                  <button type="button" onClick={() => setActiveId(tabId)} className="flex max-w-[160px] items-center gap-1.5 text-xs">
-                    <NoteIcon note={card as VaultNote} className={cn("size-3.5", active ? "text-primary" : "text-muted-foreground")} />
-                    <span className="truncate">{noteLabel(card as VaultNote)}</span>
-                  </button>
-                  {openTabs.length > 1 && (
-                    <button type="button" aria-label={`Fechar ${noteLabel(card as VaultNote)}`} onClick={() => closeTab(tabId)} className="rounded p-0.5 text-muted-foreground hover:text-foreground">
-                      <X className="size-3.5" />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+
 
 
           {activeNote ? (
@@ -490,13 +511,27 @@ function SubjectVault() {
         </section>
       </div>
 
-      {/* mobile sidebar */}
-      <Dialog open={sidebarOpen} onOpenChange={setSidebarOpen}>
-        <DialogContent className="max-w-md p-0">
-          <DialogHeader className="px-4 pt-4"><DialogTitle>Pastas e notas</DialogTitle></DialogHeader>
-          <div className="h-[70vh]">{sidebar}</div>
-        </DialogContent>
-      </Dialog>
+      {/* mobile sidebar — painel deslizante */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            aria-label="Fechar pastas"
+            onClick={() => setSidebarOpen(false)}
+            className="absolute inset-0 animate-in bg-background/70 backdrop-blur-sm fade-in duration-200"
+          />
+          <div className="absolute inset-y-0 left-0 flex w-[86%] max-w-xs animate-in flex-col border-r border-border bg-card shadow-2xl slide-in-from-left duration-300">
+            <div className="flex items-center justify-between border-b border-border px-3 py-2">
+              <span className="text-sm font-medium">Pastas e notas</span>
+              <button type="button" aria-label="Fechar" onClick={() => setSidebarOpen(false)} className="rounded p-1 text-muted-foreground transition hover:text-foreground">
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="min-h-0 flex-1">{sidebar}</div>
+          </div>
+        </div>
+      )}
+
 
       {/* new folder */}
       <Dialog open={newFolderParent !== undefined} onOpenChange={(o) => { if (!o) { setNewFolderParent(undefined); setNewFolderTitle(""); } }}>
