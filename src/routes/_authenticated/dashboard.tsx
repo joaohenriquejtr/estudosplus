@@ -151,7 +151,7 @@ function Dashboard() {
         <section className="glass-card p-5">
           <header className="flex items-center gap-2 mb-4">
             <ListChecks className="size-4 text-primary" />
-            <h2 className="font-semibold">Tarefas para hoje</h2>
+            <h2 className="font-display font-semibold">Tarefas para hoje</h2>
             <span className="ml-auto text-xs text-muted-foreground">{tasks.length}</span>
           </header>
           {tasks.length === 0 ? (
@@ -175,7 +175,7 @@ function Dashboard() {
         <section className="glass-card p-5">
           <header className="flex items-center gap-2 mb-4">
             <CalendarClock className="size-4 text-primary" />
-            <h2 className="font-semibold">Próximos compromissos</h2>
+            <h2 className="font-display font-semibold">Próximos compromissos</h2>
           </header>
           {events.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhuma data próxima cadastrada.</p>
