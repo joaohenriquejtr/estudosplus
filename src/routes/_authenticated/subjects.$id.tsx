@@ -255,6 +255,28 @@ function SubjectVault() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const createNoteFromWikiLink = useMutation({
+    mutationFn: async (title: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+      const { data, error } = await supabase.from("content_cards").insert({
+        user_id: user.id, subject_id: id, title, content_type: "text",
+        text_content: `# ${title}\n`, category: "anotacao",
+        chapter_id: activeNote?.chapter_id ?? null,
+      }).select().single();
+      if (error) throw error;
+      return data as any;
+    },
+    onSuccess: async (card) => {
+      toast.success("Nota criada");
+      await qc.invalidateQueries({ queryKey: ["cards", id] });
+      setOpenTabs((tabs) => (tabs.includes(card.id) ? tabs : [...tabs, card.id]));
+      setActiveId(card.id);
+      if (card.chapter_id) setExpanded((e) => ({ ...e, [card.chapter_id]: true }));
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const createLink = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -492,6 +514,7 @@ function SubjectVault() {
               wikiNotes={wikiNotes}
               backlinks={backlinks}
               onOpenNote={openNote}
+              onCreateNote={(title) => createNoteFromWikiLink.mutate(title)}
               saving={updateNote.isPending}
               onSave={(patch) => updateNote.mutate({ id: activeNote.id, ...patch })}
             />

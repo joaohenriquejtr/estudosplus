@@ -11,9 +11,11 @@ interface MarkdownProps {
   /** Notes available for [[internal links]]. */
   wikiNotes?: WikiNote[];
   onWikiLinkClick?: (note: WikiNote) => void;
+  /** Called when clicking a [[link]] that has no matching note yet. */
+  onWikiLinkCreate?: (title: string) => void;
 }
 
-export function Markdown({ children, className, compact = false, wikiNotes = [], onWikiLinkClick }: MarkdownProps) {
+export function Markdown({ children, className, compact = false, wikiNotes = [], onWikiLinkClick, onWikiLinkCreate }: MarkdownProps) {
   return (
     <div
       className={cn(
@@ -38,11 +40,21 @@ export function Markdown({ children, className, compact = false, wikiNotes = [],
                 >
                   {linkChildren}
                 </button>
+              ) : onWikiLinkCreate ? (
+                <button
+                  type="button"
+                  title={`Criar nota "${title}"`}
+                  onClick={(event) => { event.stopPropagation(); onWikiLinkCreate(title); }}
+                  className="text-muted-foreground decoration-dashed underline underline-offset-2 hover:text-primary"
+                >
+                  {linkChildren}
+                </button>
               ) : <span className="text-muted-foreground decoration-dashed underline underline-offset-2">{linkChildren}</span>;
             }
             return <a {...props} href={href} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-2 hover:opacity-80" />;
           },
         }}
+      
       >
         {toMarkdownWithWikiLinks(children)}
       </ReactMarkdown>
