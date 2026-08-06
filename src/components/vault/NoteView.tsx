@@ -26,11 +26,12 @@ interface NoteViewProps {
   wikiNotes: WikiNote[];
   backlinks: any[];
   onOpenNote: (noteId: string) => void;
+  onCreateNote?: (title: string) => void;
   onSave: (patch: { title: string | null; text_content: string | null; category: string; chapter_id: string | null }) => void;
   saving: boolean;
 }
 
-export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onSave, saving }: NoteViewProps) {
+export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCreateNote, onSave, saving }: NoteViewProps) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
@@ -172,7 +173,7 @@ export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onSa
           </div>
         ) : note.content_type === "text" ? (
           note.text_content?.trim()
-            ? <Markdown wikiNotes={wikiNotes} onWikiLinkClick={(n) => onOpenNote(n.id)}>{note.text_content}</Markdown>
+            ? <Markdown wikiNotes={wikiNotes} onWikiLinkClick={(n) => onOpenNote(n.id)} onWikiLinkCreate={onCreateNote}>{note.text_content}</Markdown>
             : <p className="text-sm text-muted-foreground">Nota vazia. Clique em “Editar” para escrever.</p>
         ) : note.content_type === "file" ? (
           !viewUrl ? <p className="py-12 text-center text-sm text-muted-foreground">Carregando…</p>
