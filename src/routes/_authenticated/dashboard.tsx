@@ -98,23 +98,29 @@ function Dashboard() {
   const motiv = motivacionais[new Date().getDate() % motivacionais.length];
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="glass-card p-6 flex gap-4 items-start">
-        <div className="size-10 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
-          <Sparkles className="size-5 text-primary" />
-        </div>
-        <div>
-          <p className="text-sm text-muted-foreground">{format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}</p>
-          <p className="text-lg font-medium mt-1">{motiv}</p>
+    <div className="stagger-children mx-auto max-w-5xl space-y-6">
+      <div className="glass-card relative overflow-hidden p-6">
+        <div className="grid-backdrop pointer-events-none absolute inset-0 opacity-50" aria-hidden />
+        <div className="relative flex items-start gap-4">
+          <div className="grid size-10 shrink-0 place-items-center rounded-md border border-primary/30 bg-primary/10">
+            <Sparkles className="size-4 text-primary" />
+          </div>
+          <div className="min-w-0">
+            <p className="tech-label">{format(new Date(), "EEEE · d 'de' MMMM", { locale: ptBR })}</p>
+            <p className="mt-2 font-display text-xl font-semibold leading-snug tracking-tight sm:text-2xl">
+              {motiv}
+            </p>
+          </div>
         </div>
       </div>
 
       <section className="glass-card p-5">
-        <header className="flex items-center gap-2 mb-4">
+        <header className="mb-4 flex items-center gap-2">
           <CalendarRange className="size-4 text-primary" />
-          <h2 className="font-semibold">Cronograma de hoje</h2>
-          <Link to="/schedule" className="ml-auto text-xs text-primary hover:underline">Ver semana →</Link>
+          <h2 className="font-display font-semibold">Cronograma de hoje</h2>
+          <Link to="/schedule" className="tech-label ml-auto transition-colors hover:text-primary">Ver semana →</Link>
         </header>
+
         {todaySchedule.length === 0 ? (
           <p className="text-sm text-muted-foreground">Sem horários para hoje. <Link to="/schedule" className="text-primary hover:underline">Configure seu cronograma</Link>.</p>
         ) : (
