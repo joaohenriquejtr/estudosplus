@@ -30,24 +30,30 @@ function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-2">
-          <div className="size-8 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
+          <div className="grid size-8 shrink-0 place-items-center rounded-md border border-primary/30 bg-primary/10">
             <GraduationCap className="size-4 text-primary" />
           </div>
-          <span className="font-semibold tracking-tight group-data-[collapsible=icon]:hidden">Estudo+</span>
+          <div className="min-w-0 group-data-[collapsible=icon]:hidden">
+            <span className="block truncate font-display text-sm font-semibold tracking-tight">Estudo+</span>
+            <span className="tech-label block text-[0.6rem]">sistema de estudos</span>
+          </div>
         </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => {
+              {items.map((item, i) => {
                 const active = pathname === item.url || (item.url !== "/dashboard" && pathname.startsWith(item.url));
                 return (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
-                      <Link to={item.url}>
-                        <item.icon className="size-4" />
-                        <span>{item.title}</span>
+                      <Link to={item.url} className="group/nav transition-all duration-200">
+                        <item.icon className={`size-4 transition-transform duration-200 group-hover/nav:scale-110 ${active ? "text-primary" : ""}`} />
+                        <span className="truncate">{item.title}</span>
+                        <span className="tech-label ml-auto text-[0.6rem] opacity-40 group-data-[collapsible=icon]:hidden">
+                          {String(i + 1).padStart(2, "0")}
+                        </span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -68,17 +74,29 @@ function AppSidebar() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const pathname = useRouterState({ select: (r) => r.location.pathname });
+  const current = items.find((i) => pathname.startsWith(i.url))?.title ?? "Estudo+";
+
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
-        <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-12 flex items-center border-b border-border/60 px-3 sticky top-0 bg-background/80 backdrop-blur z-10">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-10 flex h-12 items-center gap-3 border-b border-border/60 bg-background/75 px-3 backdrop-blur">
             <SidebarTrigger />
+            <span className="tech-label truncate">estudo+ / {current}</span>
+            <span className="ml-auto flex items-center gap-1.5">
+              <span className="animate-sheen size-1.5 rounded-full bg-primary" />
+              <span className="tech-label hidden text-[0.6rem] sm:inline">online</span>
+            </span>
           </header>
-          <main className="flex-1 p-4 md:p-8 overflow-x-hidden">{children}</main>
+          <main className="relative flex-1 overflow-x-hidden p-4 md:p-8">
+            <div className="grid-backdrop pointer-events-none absolute inset-x-0 top-0 h-64 opacity-40" aria-hidden />
+            <div className="relative animate-rise">{children}</div>
+          </main>
         </div>
       </div>
     </SidebarProvider>
   );
 }
+
