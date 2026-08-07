@@ -458,6 +458,9 @@ function SubjectVault() {
             onRenameFolder={(f) => { setRenameFolder(f); setRenameTitle(f.title); }}
             onDeleteFolder={(f) => { void (async () => { if (await confirmAction({ title: `Excluir "${f.title}"?`, description: "As subpastas serão excluídas e as notas ficarão na raiz." })) removeFolder.mutate(f.id); })(); }}
             onDeleteNote={(n) => { void (async () => { if (await confirmAction({ title: `Excluir "${noteLabel(n)}"?`, description: "Esta ação não pode ser desfeita." })) removeNote.mutate(n.id); })(); }}
+            onExpandFolder={(fid) => setExpanded((e) => ({ ...e, [fid]: true }))}
+            onMoveNote={(noteId, folderId) => moveNote.mutate({ noteId, folderId })}
+            onMoveFolder={(folderId, parentId) => moveFolder.mutate({ folderId, parentId })}
           />
         )}
       </div>
