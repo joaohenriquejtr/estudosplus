@@ -330,6 +330,30 @@ function SubjectVault() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const moveNote = useMutation({
+    mutationFn: async ({ noteId, folderId }: { noteId: string; folderId: string | null }) => {
+      const { error } = await supabase.from("content_cards").update({ chapter_id: folderId }).eq("id", noteId);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      toast.success(vars.folderId ? "Nota movida" : "Nota movida para a raiz");
+      qc.invalidateQueries({ queryKey: ["cards", id] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const moveFolder = useMutation({
+    mutationFn: async ({ folderId, parentId }: { folderId: string; parentId: string | null }) => {
+      const { error } = await supabase.from("chapters").update({ parent_id: parentId }).eq("id", folderId);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      toast.success(vars.parentId ? "Pasta movida" : "Pasta movida para a raiz");
+      qc.invalidateQueries({ queryKey: ["chapters", id] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const updateSubject = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("subjects").update({ name: editSubjectName, color: editSubjectColor }).eq("id", id);
