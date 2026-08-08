@@ -202,18 +202,38 @@ function Dashboard() {
                       <p className="text-sm font-medium truncate">{e.title}</p>
                       <div className="flex flex-wrap gap-1 mt-0.5">
                         {e.subjectsList.length > 0 ? (
-                          e.subjectsList.map((s: any) => (
-                            <Link
-                              key={s.id}
-                              to="/subjects/$id"
-                              params={{ id: s.id }}
-                              onClick={(ev) => ev.stopPropagation()}
-                              className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-muted/60 border hover:bg-primary/15 hover:border-primary/40 hover:text-primary transition"
-                            >
-                              <span className="size-1.5 rounded-full" style={{ background: s.color || "var(--primary)" }} />
-                              {s.name}
-                            </Link>
-                          ))
+                          <>
+                            {(expandedEvents.has(e.id) ? e.subjectsList : e.subjectsList.slice(0, 4)).map((s: any) => (
+                              <Link
+                                key={s.id}
+                                to="/subjects/$id"
+                                params={{ id: s.id }}
+                                onClick={(ev) => ev.stopPropagation()}
+                                className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-muted/60 border hover:bg-primary/15 hover:border-primary/40 hover:text-primary transition"
+                              >
+                                <span className="size-1.5 rounded-full" style={{ background: s.color || "var(--primary)" }} />
+                                {s.name}
+                              </Link>
+                            ))}
+                            {e.subjectsList.length > 4 && !expandedEvents.has(e.id) && (
+                              <button
+                                type="button"
+                                onClick={(ev) => { ev.stopPropagation(); toggleExpanded(e.id); }}
+                                className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-muted/60 border hover:bg-primary/15 hover:border-primary/40 hover:text-primary transition"
+                              >
+                                +{e.subjectsList.length - 4}
+                              </button>
+                            )}
+                            {e.subjectsList.length > 4 && expandedEvents.has(e.id) && (
+                              <button
+                                type="button"
+                                onClick={(ev) => { ev.stopPropagation(); toggleExpanded(e.id); }}
+                                className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-muted/60 border hover:bg-primary/15 hover:border-primary/40 hover:text-primary transition"
+                              >
+                                Menos
+                              </button>
+                            )}
+                          </>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
