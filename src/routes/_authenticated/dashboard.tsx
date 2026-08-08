@@ -96,6 +96,14 @@ function Dashboard() {
   });
 
   const motiv = motivacionais[new Date().getDate() % motivacionais.length];
+  const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
+
+  const toggleExpanded = (id: string) => {
+    const next = new Set(expandedEvents);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setExpandedEvents(next);
+  };
 
   return (
     <div className="stagger-children mx-auto max-w-5xl space-y-6">
