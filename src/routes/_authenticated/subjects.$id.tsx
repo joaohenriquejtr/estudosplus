@@ -638,39 +638,99 @@ function SubjectVault() {
 
       {/* new note */}
       <Dialog open={newNoteFolder !== undefined} onOpenChange={(o) => { if (!o) setNewNoteFolder(undefined); }}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-h-[92vh] max-w-xl overflow-auto max-sm:h-screen max-sm:max-h-screen max-sm:max-w-none max-sm:rounded-none">
           <DialogHeader>
-            <DialogTitle>Nova nota</DialogTitle>
+            <DialogTitle>{newNoteStep === "template" ? "Que tipo de nota você quer criar?" : "Nova nota"}</DialogTitle>
             <DialogDescription>
               {newNoteFolder ? `Dentro de "${(folders as VaultFolder[]).find((f) => f.id === newNoteFolder)?.title ?? ""}"` : "Na raiz da matéria"}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-2"><Label>Título</Label><Input autoFocus value={newNoteTitle} onChange={(e) => setNewNoteTitle(e.target.value)} placeholder="Aula 3 — Proteínas" /></div>
-            <div className="space-y-2">
-              <Label>Categoria</Label>
-              <Select value={newNoteCategory} onValueChange={setNewNoteCategory}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
-              </Select>
+
+          {newNoteStep === "template" ? (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {NOTE_TEMPLATES.map((tpl) => {
+                const Icon = tpl.icon;
+                const selected = newNoteTemplate === tpl.id;
+                return (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    onClick={() => setNewNoteTemplate(tpl.id)}
+                    className={cn(
+                      "flex items-start gap-3 rounded-lg border p-3 text-left transition duration-200 hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg",
+                      selected ? "border-primary bg-primary/5 shadow-md" : "border-border bg-card",
+                    )}
+                  >
+                    <Icon className={cn("mt-0.5 size-8 shrink-0", selected ? "text-primary" : "text-muted-foreground")} />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold">{tpl.name}</span>
+                      <span className="block text-xs text-muted-foreground">{tpl.description}</span>
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-            <div className="space-y-2">
-              <Label>Conteúdo (Markdown)</Label>
-              <Textarea value={newNoteText} onChange={(e) => setNewNoteText(e.target.value)} rows={8} className="font-mono text-sm" placeholder={"# Título\n- ponto importante\n[[outra nota]]"} />
-            </div>
-            {newNoteText.trim() && (
-              <div className="rounded-lg border border-border p-3">
-                <p className="mb-2 text-xs text-muted-foreground">Pré-visualização</p>
-                <Markdown compact>{newNoteText}</Markdown>
+          ) : (
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label>Título</Label>
+                <Input
+                  ref={newTitleRef}
+                  autoFocus
+                  value={newNoteTitle}
+                  onChange={(e) => {
+                    setNewNoteTitle(e.target.value);
+                    if (!bodyTouched) applyTemplate(newNoteTemplate, e.target.value);
+                  }}
+                  placeholder="Aula 3 — Proteínas"
+                />
               </div>
-            )}
-          </div>
+              <div className="space-y-2">
+                <Label>Categoria</Label>
+                <Select value={newNoteCategory} onValueChange={setNewNoteCategory}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Conteúdo (Markdown)</Label>
+                <Textarea
+                  value={newNoteText}
+                  onChange={(e) => { setNewNoteText(e.target.value); setBodyTouched(true); }}
+                  rows={12}
+                  className="font-mono text-sm"
+                  placeholder={"# Título\n- ponto importante\n[[outra nota]]"}
+                />
+              </div>
+            </div>
+          )}
+
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setNewNoteFolder(undefined)}>Cancelar</Button>
-            <Button onClick={() => createNote.mutate()} disabled={createNote.isPending || (!newNoteTitle.trim() && !newNoteText.trim())}>Criar nota</Button>
+            {newNoteStep === "template" ? (
+              <>
+                <Button variant="secondary" onClick={() => setNewNoteFolder(undefined)}>Cancelar</Button>
+                <Button
+                  disabled={!newNoteTemplate}
+                  onClick={() => {
+                    applyTemplate(newNoteTemplate, newNoteTitle);
+                    setBodyTouched(false);
+                    setNewNoteStep("edit");
+                    requestAnimationFrame(() => newTitleRef.current?.focus());
+                  }}
+                >
+                  Continuar
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="secondary" onClick={() => setNewNoteStep("template")}>Voltar</Button>
+                <Button onClick={() => createNote.mutate()} disabled={createNote.isPending || (!newNoteTitle.trim() && !newNoteText.trim())}>Criar nota</Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
 
       {/* link */}
       <Dialog open={linkOpen} onOpenChange={setLinkOpen}>
