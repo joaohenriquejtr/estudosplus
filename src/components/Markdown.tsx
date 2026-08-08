@@ -1,6 +1,7 @@
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
+import { WikiLink } from "@/components/WikiLink";
 import { findWikiNote, toMarkdownWithWikiLinks, type WikiNote } from "@/lib/note-links";
 
 interface MarkdownProps {
@@ -32,28 +33,21 @@ export function Markdown({ children, className, compact = false, wikiNotes = [],
             if (href?.startsWith("note:")) {
               const title = decodeURIComponent(href.slice("note:".length));
               const note = findWikiNote(wikiNotes, title);
-              return note ? (
-                <button
-                  type="button"
-                  onClick={(event) => { event.stopPropagation(); onWikiLinkClick?.(note); }}
-                  className="text-primary underline underline-offset-2 hover:opacity-80"
+              return (
+                <WikiLink
+                  linkText={title}
+                  noteExists={!!note}
+                  preview={note?.preview}
+                  onClick={note ? () => onWikiLinkClick?.(note) : onWikiLinkCreate ? () => onWikiLinkCreate(title) : undefined}
                 >
                   {linkChildren}
-                </button>
-              ) : onWikiLinkCreate ? (
-                <button
-                  type="button"
-                  title={`Criar nota "${title}"`}
-                  onClick={(event) => { event.stopPropagation(); onWikiLinkCreate(title); }}
-                  className="text-muted-foreground decoration-dashed underline underline-offset-2 hover:text-primary"
-                >
-                  {linkChildren}
-                </button>
-              ) : <span className="text-muted-foreground decoration-dashed underline underline-offset-2">{linkChildren}</span>;
+                </WikiLink>
+              );
             }
             return <a {...props} href={href} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-2 hover:opacity-80" />;
           },
         }}
+
       
       >
         {toMarkdownWithWikiLinks(children)}
