@@ -72,6 +72,28 @@ function SubjectVault() {
   const [newNoteTitle, setNewNoteTitle] = useState("");
   const [newNoteText, setNewNoteText] = useState("");
   const [newNoteCategory, setNewNoteCategory] = useState("anotacao");
+  const [newNoteStep, setNewNoteStep] = useState<"template" | "edit">("template");
+  const [newNoteTemplate, setNewNoteTemplate] = useState<string>(DEFAULT_TEMPLATE_ID);
+  const [bodyTouched, setBodyTouched] = useState(false);
+  const newTitleRef = useRef<HTMLInputElement>(null);
+
+  const openNewNote = (folderId: string | null) => {
+    setNewNoteFolder(folderId);
+    setNewNoteTitle("");
+    setNewNoteText("");
+    setNewNoteCategory("anotacao");
+    setNewNoteTemplate(DEFAULT_TEMPLATE_ID);
+    setNewNoteStep("template");
+    setBodyTouched(false);
+  };
+
+  const applyTemplate = (templateId: string, title: string) => {
+    const tpl = NOTE_TEMPLATES.find((t) => t.id === templateId);
+    if (!tpl) return;
+    setNewNoteCategory(tpl.category);
+    setNewNoteText(renderTemplate(tpl, { titulo: title, nome_da_materia: subject?.name ?? "" }));
+  };
+
 
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkTitle, setLinkTitle] = useState("");
