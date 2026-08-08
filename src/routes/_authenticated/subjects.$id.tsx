@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, FileText, Upload, Trash2, Plus, Pencil, Link2, X, PanelLeft, FolderPlus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
-import { extractWikiLinks, normalizeNoteTitle, type WikiNote } from "@/lib/note-links";
+import { extractWikiLinks, normalizeNoteTitle, notePreview, type WikiNote } from "@/lib/note-links";
 import { VaultTree, NoteIcon, noteLabel, type VaultFolder, type VaultNote } from "@/components/vault/VaultTree";
 import { NoteView, CATEGORIES } from "@/components/vault/NoteView";
 import { cn } from "@/lib/utils";
