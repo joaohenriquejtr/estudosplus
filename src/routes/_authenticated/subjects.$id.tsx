@@ -424,7 +424,7 @@ function SubjectVault() {
   const sidebar = (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-1 border-b border-border p-2">
-        <Button size="sm" variant="secondary" className="flex-1 gap-1.5" onClick={() => { setNewNoteFolder(null); setNewNoteTitle(""); setNewNoteText(""); }}>
+        <Button size="sm" variant="secondary" className="flex-1 gap-1.5" onClick={() => openNewNote(null)}>
           <Plus className="size-4" />Nota
         </Button>
         <Button size="sm" variant="ghost" aria-label="Nova pasta na raiz" title="Nova pasta" onClick={() => setNewFolderParent(null)}><FolderPlus className="size-4" /></Button>
@@ -501,7 +501,7 @@ function SubjectVault() {
             activeNoteId={activeId}
             onToggle={(fid) => setExpanded((e) => ({ ...e, [fid]: !e[fid] }))}
             onOpenNote={openNote}
-            onNewNote={(fid) => { setNewNoteFolder(fid); setNewNoteTitle(""); setNewNoteText(""); }}
+            onNewNote={(fid) => openNewNote(fid)}
             onNewFolder={(pid) => setNewFolderParent(pid)}
             onRenameFolder={(f) => { setRenameFolder(f); setRenameTitle(f.title); }}
             onDeleteFolder={(f) => { void (async () => { if (await confirmAction({ title: `Excluir "${f.title}"?`, description: "As subpastas serão excluídas e as notas ficarão na raiz." })) removeFolder.mutate(f.id); })(); }}
@@ -578,7 +578,7 @@ function SubjectVault() {
               </p>
               <div className="flex flex-wrap justify-center gap-2">
                 <Button size="sm" variant="secondary" className="lg:hidden" onClick={() => setSidebarOpen(true)}><PanelLeft className="mr-1.5 size-4" />Abrir pastas</Button>
-                <Button size="sm" onClick={() => { setNewNoteFolder(null); setNewNoteTitle(""); setNewNoteText(""); }}><Plus className="mr-1.5 size-4" />Nova nota</Button>
+                <Button size="sm" onClick={() => openNewNote(null)}><Plus className="mr-1.5 size-4" />Nova nota</Button>
               </div>
             </div>
           )}
