@@ -188,7 +188,8 @@ function SubjectVault() {
   /* ---------- derived ---------- */
   const wikiNotes = useMemo<WikiNote[]>(() => cards
     .filter((c) => c.content_type === "text" && c.title?.trim())
-    .map((c) => ({ id: c.id, title: c.title.trim() })), [cards]);
+    .map((c) => ({ id: c.id, title: c.title.trim(), preview: notePreview(c.text_content) })), [cards]);
+
 
   const activeNote = cards.find((c) => c.id === activeId) ?? null;
 
