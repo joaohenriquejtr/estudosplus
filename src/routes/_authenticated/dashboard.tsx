@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, isToday, parseISO, differenceInCalendarDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Sparkles, CalendarClock, ListChecks, CalendarRange, Clock } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Painel — Estudo+" }] }),
