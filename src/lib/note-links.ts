@@ -1,9 +1,23 @@
 export type WikiNote = {
   id: string;
   title: string;
+  /** Primeiras linhas do conteúdo, usadas no tooltip de preview. */
+  preview?: string;
 };
 
 export const normalizeNoteTitle = (title: string) => title.trim().replace(/\s+/g, " ").toLocaleLowerCase("pt-BR");
+
+/** Primeiras `lines` linhas não vazias do markdown, sem marcações pesadas. */
+export const notePreview = (text: string | null | undefined, lines = 2) => {
+  if (!text) return "";
+  return text
+    .split("\n")
+    .map((l) => l.replace(/^#{1,6}\s*/, "").replace(/\[\[([^\]\n]+)\]\]/g, "$1").replace(/[*_`>]/g, "").trim())
+    .filter(Boolean)
+    .slice(0, lines)
+    .join("\n");
+};
+
 
 export const extractWikiLinks = (text: string | null | undefined) => {
   if (!text) return [];
