@@ -16,6 +16,8 @@ import { extractWikiLinks, normalizeNoteTitle, type WikiNote } from "@/lib/note-
 import { VaultTree, NoteIcon, noteLabel, type VaultFolder, type VaultNote } from "@/components/vault/VaultTree";
 import { NoteView, CATEGORIES } from "@/components/vault/NoteView";
 import { cn } from "@/lib/utils";
+import { NOTE_TEMPLATES, DEFAULT_TEMPLATE_ID, renderTemplate } from "@/lib/note-templates";
+
 
 export const Route = createFileRoute("/_authenticated/subjects/$id")({
   head: () => ({
