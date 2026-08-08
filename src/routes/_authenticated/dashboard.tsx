@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, isToday, parseISO, differenceInCalendarDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Sparkles, CalendarClock, ListChecks, CalendarRange, Clock } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Painel — Estudo+" }] }),
@@ -96,6 +96,14 @@ function Dashboard() {
   });
 
   const motiv = motivacionais[new Date().getDate() % motivacionais.length];
+  const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
+
+  const toggleExpanded = (id: string) => {
+    const next = new Set(expandedEvents);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setExpandedEvents(next);
+  };
 
   return (
     <div className="stagger-children mx-auto max-w-5xl space-y-6">
@@ -194,18 +202,38 @@ function Dashboard() {
                       <p className="text-sm font-medium truncate">{e.title}</p>
                       <div className="flex flex-wrap gap-1 mt-0.5">
                         {e.subjectsList.length > 0 ? (
-                          e.subjectsList.map((s: any) => (
-                            <Link
-                              key={s.id}
-                              to="/subjects/$id"
-                              params={{ id: s.id }}
-                              onClick={(ev) => ev.stopPropagation()}
-                              className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-muted/60 border hover:bg-primary/15 hover:border-primary/40 hover:text-primary transition"
-                            >
-                              <span className="size-1.5 rounded-full" style={{ background: s.color || "var(--primary)" }} />
-                              {s.name}
-                            </Link>
-                          ))
+                          <>
+                            {(expandedEvents.has(e.id) ? e.subjectsList : e.subjectsList.slice(0, 4)).map((s: any) => (
+                              <Link
+                                key={s.id}
+                                to="/subjects/$id"
+                                params={{ id: s.id }}
+                                onClick={(ev) => ev.stopPropagation()}
+                                className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-muted/60 border hover:bg-primary/15 hover:border-primary/40 hover:text-primary transition"
+                              >
+                                <span className="size-1.5 rounded-full" style={{ background: s.color || "var(--primary)" }} />
+                                {s.name}
+                              </Link>
+                            ))}
+                            {e.subjectsList.length > 4 && !expandedEvents.has(e.id) && (
+                              <button
+                                type="button"
+                                onClick={(ev) => { ev.stopPropagation(); toggleExpanded(e.id); }}
+                                className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-muted/60 border hover:bg-primary/15 hover:border-primary/40 hover:text-primary transition"
+                              >
+                                +{e.subjectsList.length - 4}
+                              </button>
+                            )}
+                            {e.subjectsList.length > 4 && expandedEvents.has(e.id) && (
+                              <button
+                                type="button"
+                                onClick={(ev) => { ev.stopPropagation(); toggleExpanded(e.id); }}
+                                className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-muted/60 border hover:bg-primary/15 hover:border-primary/40 hover:text-primary transition"
+                              >
+                                Menos
+                              </button>
+                            )}
+                          </>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
