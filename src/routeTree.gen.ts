@@ -17,6 +17,7 @@ import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedScheduleRouteImport } from './routes/_authenticated/schedule'
 import { Route as AuthenticatedGraphRouteImport } from './routes/_authenticated/graph'
+import { Route as AuthenticatedFocoRouteImport } from './routes/_authenticated/foco'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -63,6 +64,11 @@ const AuthenticatedScheduleRoute = AuthenticatedScheduleRouteImport.update({
 const AuthenticatedGraphRoute = AuthenticatedGraphRouteImport.update({
   id: '/graph',
   path: '/graph',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFocoRoute = AuthenticatedFocoRouteImport.update({
+  id: '/foco',
+  path: '/foco',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
@@ -118,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/foco': typeof AuthenticatedFocoRoute
   '/graph': typeof AuthenticatedGraphRoute
   '/schedule': typeof AuthenticatedScheduleRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -135,6 +142,7 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/foco': typeof AuthenticatedFocoRoute
   '/graph': typeof AuthenticatedGraphRoute
   '/schedule': typeof AuthenticatedScheduleRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -154,6 +162,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/foco': typeof AuthenticatedFocoRoute
   '/_authenticated/graph': typeof AuthenticatedGraphRoute
   '/_authenticated/schedule': typeof AuthenticatedScheduleRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
@@ -173,6 +182,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/calendar'
     | '/dashboard'
+    | '/foco'
     | '/graph'
     | '/schedule'
     | '/settings'
@@ -190,6 +200,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/calendar'
     | '/dashboard'
+    | '/foco'
     | '/graph'
     | '/schedule'
     | '/settings'
@@ -208,6 +219,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/calendar'
     | '/_authenticated/dashboard'
+    | '/_authenticated/foco'
     | '/_authenticated/graph'
     | '/_authenticated/schedule'
     | '/_authenticated/settings'
@@ -287,6 +299,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGraphRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/foco': {
+      id: '/_authenticated/foco'
+      path: '/foco'
+      fullPath: '/foco'
+      preLoaderRoute: typeof AuthenticatedFocoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -349,6 +368,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedFocoRoute: typeof AuthenticatedFocoRoute
   AuthenticatedGraphRoute: typeof AuthenticatedGraphRoute
   AuthenticatedScheduleRoute: typeof AuthenticatedScheduleRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
@@ -360,6 +380,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedFocoRoute: AuthenticatedFocoRoute,
   AuthenticatedGraphRoute: AuthenticatedGraphRoute,
   AuthenticatedScheduleRoute: AuthenticatedScheduleRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
