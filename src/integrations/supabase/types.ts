@@ -297,6 +297,66 @@ export type Database = {
           },
         ]
       }
+      study_sessions: {
+        Row: {
+          chapter_id: string | null
+          completed: boolean
+          created_at: string
+          duration_seconds: number
+          ended_at: string | null
+          id: string
+          mode: string
+          note: string | null
+          started_at: string
+          subject_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chapter_id?: string | null
+          completed?: boolean
+          created_at?: string
+          duration_seconds?: number
+          ended_at?: string | null
+          id?: string
+          mode?: string
+          note?: string | null
+          started_at?: string
+          subject_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chapter_id?: string | null
+          completed?: boolean
+          created_at?: string
+          duration_seconds?: number
+          ended_at?: string | null
+          id?: string
+          mode?: string
+          note?: string | null
+          started_at?: string
+          subject_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_sessions_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "study_sessions_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subjects: {
         Row: {
           color: string | null
