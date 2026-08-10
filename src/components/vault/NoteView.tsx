@@ -37,6 +37,8 @@ interface NoteViewProps {
   flashcards?: NoteFlashcards;
   generatingFlashcards?: boolean;
   onGenerateFlashcards?: () => void;
+  onFlashcardAttempt?: (acertou: boolean) => Promise<void>;
+  recordingFlashcardAttempt?: boolean;
   isStub?: boolean;
   stubMentionCount?: number;
   stubReferenceCount?: number;
@@ -45,7 +47,7 @@ interface NoteViewProps {
   onFillStub?: () => void;
 }
 
-export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCreateNote, onSave, saving, summary, generatingSummary = false, onGenerateSummary, flashcards, generatingFlashcards = false, onGenerateFlashcards, isStub = false, stubMentionCount = 0, stubReferenceCount = 0, fillingStub = false, generatedStubContent, onFillStub }: NoteViewProps) {
+export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCreateNote, onSave, saving, summary, generatingSummary = false, onGenerateSummary, flashcards, generatingFlashcards = false, onGenerateFlashcards, onFlashcardAttempt, recordingFlashcardAttempt = false, isStub = false, stubMentionCount = 0, stubReferenceCount = 0, fillingStub = false, generatedStubContent, onFillStub }: NoteViewProps) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
@@ -54,6 +56,7 @@ export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCr
   const [viewUrl, setViewUrl] = useState<string | null>(null);
   const [flashcardIndex, setFlashcardIndex] = useState(0);
   const [showFlashcardAnswer, setShowFlashcardAnswer] = useState(false);
+  const [attemptedFlashcards, setAttemptedFlashcards] = useState<Set<number>>(new Set());
   const [stubIgnored, setStubIgnored] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const textRef = useRef<HTMLTextAreaElement>(null);
@@ -77,6 +80,7 @@ export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCr
   useEffect(() => {
     setFlashcardIndex(0);
     setShowFlashcardAnswer(false);
+    setAttemptedFlashcards(new Set());
   }, [note.id, flashcards]);
 
   useEffect(() => {
@@ -124,6 +128,13 @@ export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCr
     const folder = folders.find((f) => f.id === fid);
     if (!folder) return "Raiz";
     return folder.parent_id ? `${folderPath(folder.parent_id)} / ${folder.title}` : folder.title;
+  };
+
+  const registerFlashcardAttempt = (acertou: boolean) => {
+    if (!onFlashcardAttempt) return;
+    void onFlashcardAttempt(acertou)
+      .then(() => setAttemptedFlashcards((attempted) => new Set(attempted).add(flashcardIndex)))
+      .catch(() => undefined);
   };
 
   return (
@@ -282,6 +293,12 @@ export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCr
                           </div>
                         ) : <p className="mt-4 text-xs text-primary">Toque para revelar a resposta</p>}
                       </button>
+                      {showFlashcardAnswer && (
+                        <div className="mt-3 flex gap-2">
+                          <Button size="sm" variant="secondary" disabled={recordingFlashcardAttempt || attemptedFlashcards.has(flashcardIndex)} onClick={() => registerFlashcardAttempt(true)}>Acertei</Button>
+                          <Button size="sm" variant="secondary" disabled={recordingFlashcardAttempt || attemptedFlashcards.has(flashcardIndex)} onClick={() => registerFlashcardAttempt(false)}>Errei</Button>
+                        </div>
+                      )}
                       <div className="mt-3 flex items-center justify-between gap-2">
                         <Button size="sm" variant="ghost" disabled={flashcardIndex === 0} onClick={() => { setFlashcardIndex((index) => index - 1); setShowFlashcardAnswer(false); }}><ChevronLeft className="mr-1 size-4" />Anterior</Button>
                         <Button size="sm" variant="ghost" disabled={flashcardIndex === flashcards.flashcards.length - 1} onClick={() => { setFlashcardIndex((index) => index + 1); setShowFlashcardAnswer(false); }}>Próximo<ChevronRight className="ml-1 size-4" /></Button>

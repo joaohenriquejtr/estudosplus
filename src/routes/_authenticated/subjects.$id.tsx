@@ -20,6 +20,7 @@ import { NOTE_TEMPLATES, DEFAULT_TEMPLATE_ID, renderTemplate } from "@/lib/note-
 import { fillNoteStub, generateNoteFlashcards, generateNoteSummary, type NoteFlashcards, type NoteSummary } from "@/lib/api/ai.functions";
 import { getCachedResponse, hashPrompt, setCachedResponse, type StubReference } from "@/lib/ai/llm";
 import { getSemanticContext, syncContentCardEmbedding } from "@/lib/api/embeddings.functions";
+import { recordFlashcardAttempt } from "@/lib/study/proficiency";
 
 
 export const Route = createFileRoute("/_authenticated/subjects/$id")({
@@ -450,6 +451,12 @@ function SubjectVault() {
     onError: (error: Error) => toast.error(error.message || "Não foi possível gerar os flashcards."),
   });
 
+  const recordAttempt = useMutation({
+    mutationFn: ({ noteId, acertou }: { noteId: string; acertou: boolean }) => recordFlashcardAttempt(noteId, acertou),
+    onSuccess: (_data, { acertou }) => toast.success(acertou ? "Boa! Progresso registrado." : "Registrado. Vamos revisar este ponto de novo."),
+    onError: (error: Error) => toast.error(error.message || "Não foi possível registrar a tentativa."),
+  });
+
   const fillStub = useMutation({
     mutationFn: async ({ noteId, source, topic, subjectName, references }: {
       noteId: string; source: string; topic: string; subjectName: string; references: StubReference[];
@@ -713,6 +720,8 @@ function SubjectVault() {
                 noteId: activeNote.id,
                 content: activeNote.text_content ?? "",
               })}
+              recordingFlashcardAttempt={recordAttempt.isPending}
+              onFlashcardAttempt={(acertou) => recordAttempt.mutateAsync({ noteId: activeNote.id, acertou })}
               isStub={isStubNote(activeNote)}
               stubMentionCount={stubMentionCount}
               stubReferenceCount={stubReferences.length}
