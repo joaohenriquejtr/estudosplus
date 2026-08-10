@@ -39,7 +39,9 @@ Formato de resposta (JSON):
 {
   "bullets": ["...", "...", "..."],
   "fraseChave": "..."
-}`,
+}
+
+Retorne somente o objeto JSON válido. Não use markdown, bloco de código, título ou texto antes/depois do JSON.`,
     temperature: 0.3,
     maxTokens: 500,
   };

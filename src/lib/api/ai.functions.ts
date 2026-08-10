@@ -17,14 +17,42 @@ const summaryInputSchema = z.object({
   subject: z.string().trim().min(1).max(120),
 });
 
-function parseSummary(text: string): NoteSummary {
-  const normalized = text
-    .trim()
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/\s*```$/, "");
-
+function parseJsonObject(text: string): unknown {
+  const normalized = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
   try {
-    return noteSummarySchema.parse(JSON.parse(normalized));
+    return JSON.parse(normalized) as unknown;
+  } catch {
+    // Some models prepend a short sentence before an otherwise valid JSON object.
+    const start = normalized.indexOf("{");
+    if (start < 0) throw new Error("No JSON object found");
+
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    for (let index = start; index < normalized.length; index += 1) {
+      const character = normalized[index];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (character === "\\") escaped = true;
+        else if (character === '"') inString = false;
+        continue;
+      }
+
+      if (character === '"') inString = true;
+      else if (character === "{") depth += 1;
+      else if (character === "}") {
+        depth -= 1;
+        if (depth === 0) return JSON.parse(normalized.slice(start, index + 1)) as unknown;
+      }
+    }
+
+    throw new Error("No complete JSON object found");
+  }
+}
+
+function parseSummary(text: string): NoteSummary {
+  try {
+    return noteSummarySchema.parse(parseJsonObject(text));
   } catch {
     throw new Error("A IA retornou um formato inválido. Tente gerar o resumo novamente.");
   }
