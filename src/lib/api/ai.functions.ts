@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { createFlashcardsRequest, createStubFillRequest, createStudySummaryRequest } from "@/lib/ai/llm";
+import { createFlashcardsRequest, createSocraticChatRequest, createStubFillRequest, createStudySummaryRequest } from "@/lib/ai/llm";
 import { generateWithAI } from "@/lib/ai/llm.server";
 
 const noteSummarySchema = z.object({
@@ -36,6 +36,16 @@ const stubFillInputSchema = z.object({
     title: z.string().trim().min(1).max(240),
     content: z.string().trim().min(1).max(20_000),
   })).min(1).max(3),
+});
+
+const socraticChatInputSchema = z.object({
+  title: z.string().trim().min(1).max(240),
+  content: z.string().trim().min(1).max(60_000),
+  history: z.array(z.object({
+    role: z.enum(["user", "assistant"]),
+    content: z.string().trim().min(1).max(2_000),
+  })).max(10),
+  message: z.string().trim().min(1, "Digite uma mensagem para conversar.").max(2_000),
 });
 
 function parseJsonObject(text: string): unknown {
@@ -110,4 +120,15 @@ export const fillNoteStub = createServerFn({ method: "POST" })
     const content = response.text.trim().replace(/^```(?:markdown)?\s*/i, "").replace(/\s*```$/, "").trim();
     if (!content) throw new Error("A IA não retornou conteúdo para preencher a nota.");
     return { content };
+  });
+
+/** Sends one turn to the note-grounded Socratic tutor. */
+export const sendSocraticChatMessage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(socraticChatInputSchema)
+  .handler(async ({ data }) => {
+    const response = await generateWithAI(createSocraticChatRequest(data.title, data.content, data.history, data.message));
+    const message = response.text.trim();
+    if (!message) throw new Error("A IA não retornou uma resposta. Tente novamente.");
+    return { message };
   });

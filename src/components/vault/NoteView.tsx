@@ -6,13 +6,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Markdown } from "@/components/Markdown";
-import { BrainCircuit, ChevronLeft, ChevronRight, Eye, ExternalLink, Layers3, Link2, Pencil, Save, Sparkles, X } from "lucide-react";
+import { BrainCircuit, ChevronLeft, ChevronRight, Eye, ExternalLink, Layers3, Link2, MessageCircle, Pencil, Save, Sparkles, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { normalizeNoteTitle, type WikiNote } from "@/lib/note-links";
 import type { VaultFolder } from "./VaultTree";
 import type { NoteFlashcards, NoteSummary } from "@/lib/api/ai.functions";
+import { SocraticChatSheet } from "./SocraticChatSheet";
 
 export const CATEGORIES = [
   { value: "anotacao", label: "Anotação" },
@@ -54,6 +55,7 @@ export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCr
   const [flashcardIndex, setFlashcardIndex] = useState(0);
   const [showFlashcardAnswer, setShowFlashcardAnswer] = useState(false);
   const [stubIgnored, setStubIgnored] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const textRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -63,6 +65,7 @@ export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCr
     setCategory(note.category ?? "anotacao");
     setFolderId(note.chapter_id ?? null);
     setStubIgnored(false);
+    setChatOpen(false);
   }, [note.id]);
 
   useEffect(() => {
@@ -161,6 +164,7 @@ export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCr
                 <Layers3 className="mr-1.5 size-4 text-primary" />
                 {generatingFlashcards ? "Gerando…" : flashcards ? "Atualizar cards" : "Gerar cards"}
               </Button>
+              <Button size="sm" variant="secondary" onClick={() => setChatOpen(true)} disabled={!note.text_content?.trim()}><MessageCircle className="mr-1.5 size-4 text-primary" />Conversar</Button>
               <Button size="sm" variant="secondary" onClick={() => setEditing(true)}><Pencil className="mr-1.5 size-4" />Editar</Button>
             </div>
           )
@@ -326,6 +330,15 @@ export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCr
             </div>
           )}
         </div>
+      )}
+      {note.content_type === "text" && (
+        <SocraticChatSheet
+          open={chatOpen}
+          onOpenChange={setChatOpen}
+          noteId={note.id}
+          title={note.title?.trim() || "esta nota"}
+          content={note.text_content ?? ""}
+        />
       )}
     </div>
   );

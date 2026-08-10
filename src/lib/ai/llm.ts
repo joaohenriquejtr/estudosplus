@@ -82,6 +82,48 @@ export type StubReference = {
   content: string;
 };
 
+export type SocraticChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+/** Builds a note-grounded prompt for the Socratic tutor. */
+export function createSocraticChatRequest(
+  title: string,
+  content: string,
+  history: SocraticChatMessage[],
+  message: string,
+): LLMRequest {
+  const transcript = history.length > 0
+    ? history.map((entry) => `${entry.role === "user" ? "Estudante" : "Tutor"}: ${entry.content}`).join("\n")
+    : "(Esta é a primeira mensagem da conversa.)";
+
+  return {
+    systemPrompt: `Você é um tutor socrático. Seu objetivo é AJUDAR o estudante a CHEGAR à resposta sozinho, NÃO dar a resposta pronta.
+
+Regras:
+1. NUNCA diga "A resposta é..." ou "O correto é..."
+2. Faça PERGUNTAS que guiem o raciocínio
+3. Use analogias simples quando o estudante travar
+4. Se o estudante errar, não corrija diretamente — pergunte "O que te levou a pensar assim?"
+5. Baseie-se no conteúdo da nota fornecido como contexto
+6. Seja encorajador e paciente
+7. Máximo 3 perguntas por resposta sua`,
+    prompt: `Nota atual: ${title}
+Conteúdo:
+${content}
+
+Histórico da conversa:
+${transcript}
+
+Mensagem do estudante: ${message}
+
+Responda em português do Brasil. Guie o raciocínio com perguntas e não entregue a resposta pronta.`,
+    temperature: 0.5,
+    maxTokens: 500,
+  };
+}
+
 /** Builds a constrained request to turn mentions of a stub into an editable draft. */
 export function createStubFillRequest(
   topic: string,
