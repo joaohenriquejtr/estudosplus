@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { createStudySummaryRequest } from "@/lib/ai/llm";
+import { createFlashcardsRequest, createStudySummaryRequest } from "@/lib/ai/llm";
 import { generateWithAI } from "@/lib/ai/llm.server";
 
 const noteSummarySchema = z.object({
@@ -11,6 +11,18 @@ const noteSummarySchema = z.object({
 });
 
 export type NoteSummary = z.infer<typeof noteSummarySchema>;
+
+const flashcardSchema = z.object({
+  pergunta: z.string().trim().min(1),
+  resposta: z.string().trim().min(1),
+  explicacao: z.string().trim().min(1),
+});
+
+const noteFlashcardsSchema = z.object({
+  flashcards: z.array(flashcardSchema).length(5),
+});
+
+export type NoteFlashcards = z.infer<typeof noteFlashcardsSchema>;
 
 const summaryInputSchema = z.object({
   content: z.string().trim().min(1, "A nota precisa ter conteúdo para gerar um resumo.").max(60_000),
@@ -65,4 +77,17 @@ export const generateNoteSummary = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const response = await generateWithAI(createStudySummaryRequest(data.content, data.subject));
     return parseSummary(response.text);
+  });
+
+/** Generates five review flashcards for an authenticated user's note. */
+export const generateNoteFlashcards = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(summaryInputSchema.pick({ content: true }))
+  .handler(async ({ data }) => {
+    const response = await generateWithAI(createFlashcardsRequest(data.content));
+    try {
+      return noteFlashcardsSchema.parse(parseJsonObject(response.text));
+    } catch {
+      throw new Error("A IA retornou flashcards em um formato inválido. Tente gerar novamente.");
+    }
   });

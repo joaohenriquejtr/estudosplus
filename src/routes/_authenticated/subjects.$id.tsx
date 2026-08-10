@@ -17,7 +17,7 @@ import { VaultTree, NoteIcon, noteLabel, type VaultFolder, type VaultNote } from
 import { NoteView, CATEGORIES } from "@/components/vault/NoteView";
 import { cn } from "@/lib/utils";
 import { NOTE_TEMPLATES, DEFAULT_TEMPLATE_ID, renderTemplate } from "@/lib/note-templates";
-import { generateNoteSummary, type NoteSummary } from "@/lib/api/ai.functions";
+import { generateNoteFlashcards, generateNoteSummary, type NoteFlashcards, type NoteSummary } from "@/lib/api/ai.functions";
 import { getCachedResponse, hashPrompt, setCachedResponse } from "@/lib/ai/llm";
 
 
@@ -62,6 +62,19 @@ const isNoteSummary = (value: unknown): value is NoteSummary => {
     && candidate.fraseChave.trim().length > 0;
 };
 
+const isNoteFlashcards = (value: unknown): value is NoteFlashcards => {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as { flashcards?: unknown };
+  return Array.isArray(candidate.flashcards)
+    && candidate.flashcards.length === 5
+    && candidate.flashcards.every((card) => {
+      if (!card || typeof card !== "object") return false;
+      const flashcard = card as { pergunta?: unknown; resposta?: unknown; explicacao?: unknown };
+      return [flashcard.pergunta, flashcard.resposta, flashcard.explicacao]
+        .every((field) => typeof field === "string" && field.trim().length > 0);
+    });
+};
+
 function SubjectVault() {
   const { confirm: confirmAction, confirmDialog } = useConfirm();
   const { id } = Route.useParams();
@@ -77,6 +90,7 @@ function SubjectVault() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [search, setSearch] = useState("");
   const [noteSummary, setNoteSummary] = useState<{ noteId: string; source: string; data: NoteSummary } | null>(null);
+  const [noteFlashcards, setNoteFlashcards] = useState<{ noteId: string; source: string; data: NoteFlashcards } | null>(null);
 
   const [newFolderParent, setNewFolderParent] = useState<string | null | undefined>(undefined);
   const [newFolderTitle, setNewFolderTitle] = useState("");
@@ -377,6 +391,30 @@ function SubjectVault() {
     onError: (error: Error) => toast.error(error.message || "Não foi possível gerar o resumo."),
   });
 
+  const generateFlashcards = useMutation({
+    mutationFn: async ({ noteId, content }: { noteId: string; content: string }) => {
+      const hash = await hashPrompt(JSON.stringify({ feature: "note-flashcards-v1", content }));
+      const cached = getCachedResponse(hash);
+      if (cached) {
+        try {
+          const data = JSON.parse(cached) as unknown;
+          if (isNoteFlashcards(data)) return { noteId, content, data };
+        } catch {
+          // Ignore an old or malformed cache entry and ask the provider again.
+        }
+      }
+
+      const data = await generateNoteFlashcards({ data: { content } });
+      setCachedResponse(hash, JSON.stringify(data));
+      return { noteId, content, data };
+    },
+    onSuccess: ({ noteId, content, data }) => {
+      setNoteFlashcards({ noteId, source: content, data });
+      toast.success("5 flashcards gerados");
+    },
+    onError: (error: Error) => toast.error(error.message || "Não foi possível gerar os flashcards."),
+  });
+
   const removeNote = useMutation({
     mutationFn: async (cardId: string) => {
       const card = cards.find((c) => c.id === cardId);
@@ -612,6 +650,12 @@ function SubjectVault() {
                 noteId: activeNote.id,
                 content: activeNote.text_content ?? "",
                 subjectName: subject?.name ?? "Biologia",
+              })}
+              flashcards={noteFlashcards?.noteId === activeNote.id && noteFlashcards.source === (activeNote.text_content ?? "") ? noteFlashcards.data : undefined}
+              generatingFlashcards={generateFlashcards.isPending}
+              onGenerateFlashcards={() => generateFlashcards.mutate({
+                noteId: activeNote.id,
+                content: activeNote.text_content ?? "",
               })}
             />
           ) : (

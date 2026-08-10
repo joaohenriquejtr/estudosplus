@@ -6,13 +6,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Markdown } from "@/components/Markdown";
-import { ExternalLink, Eye, Link2, Pencil, Save, Sparkles, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, ExternalLink, Layers3, Link2, Pencil, Save, Sparkles, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { normalizeNoteTitle, type WikiNote } from "@/lib/note-links";
 import type { VaultFolder } from "./VaultTree";
-import type { NoteSummary } from "@/lib/api/ai.functions";
+import type { NoteFlashcards, NoteSummary } from "@/lib/api/ai.functions";
 
 export const CATEGORIES = [
   { value: "anotacao", label: "Anotação" },
@@ -33,15 +33,20 @@ interface NoteViewProps {
   summary?: NoteSummary;
   generatingSummary?: boolean;
   onGenerateSummary?: () => void;
+  flashcards?: NoteFlashcards;
+  generatingFlashcards?: boolean;
+  onGenerateFlashcards?: () => void;
 }
 
-export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCreateNote, onSave, saving, summary, generatingSummary = false, onGenerateSummary }: NoteViewProps) {
+export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCreateNote, onSave, saving, summary, generatingSummary = false, onGenerateSummary, flashcards, generatingFlashcards = false, onGenerateFlashcards }: NoteViewProps) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
   const [category, setCategory] = useState("anotacao");
   const [folderId, setFolderId] = useState<string | null>(null);
   const [viewUrl, setViewUrl] = useState<string | null>(null);
+  const [flashcardIndex, setFlashcardIndex] = useState(0);
+  const [showFlashcardAnswer, setShowFlashcardAnswer] = useState(false);
   const textRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -51,6 +56,11 @@ export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCr
     setCategory(note.category ?? "anotacao");
     setFolderId(note.chapter_id ?? null);
   }, [note.id]);
+
+  useEffect(() => {
+    setFlashcardIndex(0);
+    setShowFlashcardAnswer(false);
+  }, [note.id, flashcards]);
 
   useEffect(() => {
     let cancelled = false;
@@ -128,6 +138,15 @@ export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCr
                 <Sparkles className="mr-1.5 size-4 text-primary" />
                 {generatingSummary ? "Resumindo…" : summary ? "Atualizar resumo" : "Gerar resumo"}
               </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={onGenerateFlashcards}
+                disabled={!note.text_content?.trim() || generatingFlashcards}
+              >
+                <Layers3 className="mr-1.5 size-4 text-primary" />
+                {generatingFlashcards ? "Gerando…" : flashcards ? "Atualizar cards" : "Gerar cards"}
+              </Button>
               <Button size="sm" variant="secondary" onClick={() => setEditing(true)}><Pencil className="mr-1.5 size-4" />Editar</Button>
             </div>
           )
@@ -200,6 +219,37 @@ export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCr
                     <p className="mt-4 border-l-2 border-primary pl-3 font-medium leading-relaxed text-foreground">{summary.fraseChave}</p>
                   </section>
                 )}
+                {flashcards && (() => {
+                  const card = flashcards.flashcards[flashcardIndex];
+                  return (
+                    <section aria-label="Flashcards gerados" className="rounded-lg border border-primary/35 bg-card p-4 shadow-sm">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-primary"><Layers3 className="size-4" />Flashcards</div>
+                        <span className="font-mono text-xs text-muted-foreground">{flashcardIndex + 1} / {flashcards.flashcards.length}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowFlashcardAnswer((visible) => !visible)}
+                        className="w-full rounded-md border border-border bg-background p-4 text-left transition hover:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        aria-expanded={showFlashcardAnswer}
+                      >
+                        <p className="tech-label mb-2">Pergunta</p>
+                        <p className="font-medium leading-relaxed">{card.pergunta}</p>
+                        {showFlashcardAnswer ? (
+                          <div className="mt-4 border-t border-border pt-4">
+                            <p className="tech-label mb-2">Resposta</p>
+                            <p className="text-sm leading-relaxed">{card.resposta}</p>
+                            <p className="mt-3 text-sm leading-relaxed text-muted-foreground"><span className="font-medium text-foreground">Por quê: </span>{card.explicacao}</p>
+                          </div>
+                        ) : <p className="mt-4 text-xs text-primary">Toque para revelar a resposta</p>}
+                      </button>
+                      <div className="mt-3 flex items-center justify-between gap-2">
+                        <Button size="sm" variant="ghost" disabled={flashcardIndex === 0} onClick={() => { setFlashcardIndex((index) => index - 1); setShowFlashcardAnswer(false); }}><ChevronLeft className="mr-1 size-4" />Anterior</Button>
+                        <Button size="sm" variant="ghost" disabled={flashcardIndex === flashcards.flashcards.length - 1} onClick={() => { setFlashcardIndex((index) => index + 1); setShowFlashcardAnswer(false); }}>Próximo<ChevronRight className="ml-1 size-4" /></Button>
+                      </div>
+                    </section>
+                  );
+                })()}
                 <Markdown wikiNotes={wikiNotes} onWikiLinkClick={(n) => onOpenNote(n.id)} onWikiLinkCreate={onCreateNote}>{note.text_content}</Markdown>
               </div>
             : <p className="text-sm text-muted-foreground">Nota vazia. Clique em “Editar” para escrever.</p>

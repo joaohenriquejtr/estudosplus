@@ -47,6 +47,36 @@ Retorne somente o objeto JSON válido. Não use markdown, bloco de código, tít
   };
 }
 
+/** Builds the standard flashcard-generation request for a note. */
+export function createFlashcardsRequest(content: string): LLMRequest {
+  return {
+    systemPrompt: "Você é um tutor. Use português do Brasil, linguagem simples, direta e fiel somente ao conteúdo fornecido.",
+    prompt: `Com base no conteúdo abaixo, gere 5 flashcards no formato Q&A.
+Cada flashcard deve ter:
+- pergunta: clara e objetiva
+- resposta: curta (1-2 frases)
+- explicacao: por que esta é a resposta correta, usando o conteúdo fornecido
+
+Conteúdo:
+${content}
+
+Responda em JSON:
+{
+  "flashcards": [
+    { "pergunta": "...", "resposta": "...", "explicacao": "..." },
+    { "pergunta": "...", "resposta": "...", "explicacao": "..." },
+    { "pergunta": "...", "resposta": "...", "explicacao": "..." },
+    { "pergunta": "...", "resposta": "...", "explicacao": "..." },
+    { "pergunta": "...", "resposta": "...", "explicacao": "..." }
+  ]
+}
+
+Retorne somente o objeto JSON válido. Não use markdown, bloco de código, título ou texto antes/depois do JSON.`,
+    temperature: 0.4,
+    maxTokens: 1_200,
+  };
+}
+
 /** Creates the SHA-256 key used by the local response cache. */
 export async function hashPrompt(prompt: string): Promise<string> {
   const data = new TextEncoder().encode(prompt);
