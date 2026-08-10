@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 
-const MAX_MESSAGES = 10;
+const MAX_MESSAGES = 30;
 
 type SocraticChatSheetProps = {
   open: boolean;
@@ -117,7 +117,7 @@ export function SocraticChatSheet({ open, onOpenChange, noteId, title, content }
         </div>
 
         <div className="border-t border-border p-3">
-          {limitReached && <p className="mb-2 text-xs text-muted-foreground">Limite de 10 mensagens atingido. Limpe a conversa para começar outra.</p>}
+          {limitReached && <p className="mb-2 text-xs text-muted-foreground">Limite de 30 mensagens atingido. Limpe a conversa para começar outra.</p>}
           <div className="flex items-end gap-2">
             <Textarea
               value={draft}

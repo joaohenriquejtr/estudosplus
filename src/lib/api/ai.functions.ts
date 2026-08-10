@@ -44,7 +44,7 @@ const socraticChatInputSchema = z.object({
   history: z.array(z.object({
     role: z.enum(["user", "assistant"]),
     content: z.string().trim().min(1).max(2_000),
-  })).max(10),
+  })).max(30),
   message: z.string().trim().min(1, "Digite uma mensagem para conversar.").max(2_000),
 });
 
