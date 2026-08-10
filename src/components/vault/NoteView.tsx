@@ -6,12 +6,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Markdown } from "@/components/Markdown";
-import { ExternalLink, Eye, Link2, Pencil, Save, X } from "lucide-react";
+import { ExternalLink, Eye, Link2, Pencil, Save, Sparkles, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { normalizeNoteTitle, type WikiNote } from "@/lib/note-links";
 import type { VaultFolder } from "./VaultTree";
+import type { NoteSummary } from "@/lib/api/ai.functions";
 
 export const CATEGORIES = [
   { value: "anotacao", label: "Anotação" },
@@ -29,9 +30,12 @@ interface NoteViewProps {
   onCreateNote?: (title: string) => void;
   onSave: (patch: { title: string | null; text_content: string | null; category: string; chapter_id: string | null }) => void;
   saving: boolean;
+  summary?: NoteSummary;
+  generatingSummary?: boolean;
+  onGenerateSummary?: () => void;
 }
 
-export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCreateNote, onSave, saving }: NoteViewProps) {
+export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCreateNote, onSave, saving, summary, generatingSummary = false, onGenerateSummary }: NoteViewProps) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
@@ -114,7 +118,18 @@ export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCr
               </Button>
             </div>
           ) : (
-            <Button size="sm" variant="secondary" onClick={() => setEditing(true)}><Pencil className="mr-1.5 size-4" />Editar</Button>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={onGenerateSummary}
+                disabled={!note.text_content?.trim() || generatingSummary}
+              >
+                <Sparkles className="mr-1.5 size-4 text-primary" />
+                {generatingSummary ? "Resumindo…" : summary ? "Atualizar resumo" : "Gerar resumo"}
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => setEditing(true)}><Pencil className="mr-1.5 size-4" />Editar</Button>
+            </div>
           )
         )}
         {note.content_type !== "text" && (
@@ -173,7 +188,20 @@ export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCr
           </div>
         ) : note.content_type === "text" ? (
           note.text_content?.trim()
-            ? <Markdown wikiNotes={wikiNotes} onWikiLinkClick={(n) => onOpenNote(n.id)} onWikiLinkCreate={onCreateNote}>{note.text_content}</Markdown>
+            ? <div className="space-y-5">
+                {summary && (
+                  <section aria-label="Resumo inteligente" className="rounded-lg border border-primary/35 bg-primary/5 p-4 shadow-sm">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-primary">
+                      <Sparkles className="size-4" />Resumo inteligente
+                    </div>
+                    <ul className="space-y-2 text-sm leading-relaxed text-foreground">
+                      {summary.bullets.map((bullet, index) => <li key={`${index}-${bullet}`} className="flex gap-2"><span className="text-primary">•</span><span>{bullet}</span></li>)}
+                    </ul>
+                    <p className="mt-4 border-l-2 border-primary pl-3 font-medium leading-relaxed text-foreground">{summary.fraseChave}</p>
+                  </section>
+                )}
+                <Markdown wikiNotes={wikiNotes} onWikiLinkClick={(n) => onOpenNote(n.id)} onWikiLinkCreate={onCreateNote}>{note.text_content}</Markdown>
+              </div>
             : <p className="text-sm text-muted-foreground">Nota vazia. Clique em “Editar” para escrever.</p>
         ) : note.content_type === "file" ? (
           !viewUrl ? <p className="py-12 text-center text-sm text-muted-foreground">Carregando…</p>

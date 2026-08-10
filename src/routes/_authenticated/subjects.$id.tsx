@@ -17,6 +17,8 @@ import { VaultTree, NoteIcon, noteLabel, type VaultFolder, type VaultNote } from
 import { NoteView, CATEGORIES } from "@/components/vault/NoteView";
 import { cn } from "@/lib/utils";
 import { NOTE_TEMPLATES, DEFAULT_TEMPLATE_ID, renderTemplate } from "@/lib/note-templates";
+import { generateNoteSummary, type NoteSummary } from "@/lib/api/ai.functions";
+import { getCachedResponse, hashPrompt, setCachedResponse } from "@/lib/ai/llm";
 
 
 export const Route = createFileRoute("/_authenticated/subjects/$id")({
@@ -50,6 +52,16 @@ const safeStorageFileName = (fileName: string) => {
   return `${base}.${ext}`;
 };
 
+const isNoteSummary = (value: unknown): value is NoteSummary => {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as { bullets?: unknown; fraseChave?: unknown };
+  return Array.isArray(candidate.bullets)
+    && candidate.bullets.length === 3
+    && candidate.bullets.every((bullet) => typeof bullet === "string" && bullet.trim().length > 0)
+    && typeof candidate.fraseChave === "string"
+    && candidate.fraseChave.trim().length > 0;
+};
+
 function SubjectVault() {
   const { confirm: confirmAction, confirmDialog } = useConfirm();
   const { id } = Route.useParams();
@@ -64,6 +76,7 @@ function SubjectVault() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [search, setSearch] = useState("");
+  const [noteSummary, setNoteSummary] = useState<{ noteId: string; source: string; data: NoteSummary } | null>(null);
 
   const [newFolderParent, setNewFolderParent] = useState<string | null | undefined>(undefined);
   const [newFolderTitle, setNewFolderTitle] = useState("");
@@ -340,6 +353,30 @@ function SubjectVault() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const generateSummary = useMutation({
+    mutationFn: async ({ noteId, content, subjectName }: { noteId: string; content: string; subjectName: string }) => {
+      const hash = await hashPrompt(JSON.stringify({ feature: "note-summary-v1", content, subjectName }));
+      const cached = getCachedResponse(hash);
+      if (cached) {
+        try {
+          const data = JSON.parse(cached) as unknown;
+          if (isNoteSummary(data)) return { noteId, content, data };
+        } catch {
+          // Ignore an old or malformed cache entry and ask the provider again.
+        }
+      }
+
+      const data = await generateNoteSummary({ data: { content, subject: subjectName } });
+      setCachedResponse(hash, JSON.stringify(data));
+      return { noteId, content, data };
+    },
+    onSuccess: ({ noteId, content, data }) => {
+      setNoteSummary({ noteId, source: content, data });
+      toast.success("Resumo inteligente gerado");
+    },
+    onError: (error: Error) => toast.error(error.message || "Não foi possível gerar o resumo."),
+  });
+
   const removeNote = useMutation({
     mutationFn: async (cardId: string) => {
       const card = cards.find((c) => c.id === cardId);
@@ -569,6 +606,13 @@ function SubjectVault() {
               onCreateNote={(title) => createNoteFromWikiLink.mutate(title)}
               saving={updateNote.isPending}
               onSave={(patch) => updateNote.mutate({ id: activeNote.id, ...patch })}
+              summary={noteSummary?.noteId === activeNote.id && noteSummary.source === (activeNote.text_content ?? "") ? noteSummary.data : undefined}
+              generatingSummary={generateSummary.isPending}
+              onGenerateSummary={() => generateSummary.mutate({
+                noteId: activeNote.id,
+                content: activeNote.text_content ?? "",
+                subjectName: subject?.name ?? "Biologia",
+              })}
             />
           ) : (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 p-10 text-center">
