@@ -65,6 +65,7 @@ export type Database = {
           chapter_id: string | null
           content_type: string
           created_at: string
+          embedding: string | null
           file_mime: string | null
           file_name: string | null
           file_url: string | null
@@ -80,6 +81,7 @@ export type Database = {
           chapter_id?: string | null
           content_type: string
           created_at?: string
+          embedding?: string | null
           file_mime?: string | null
           file_name?: string | null
           file_url?: string | null
@@ -95,6 +97,7 @@ export type Database = {
           chapter_id?: string | null
           content_type?: string
           created_at?: string
+          embedding?: string | null
           file_mime?: string | null
           file_name?: string | null
           file_url?: string | null

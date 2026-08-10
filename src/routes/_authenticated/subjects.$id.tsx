@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { NOTE_TEMPLATES, DEFAULT_TEMPLATE_ID, renderTemplate } from "@/lib/note-templates";
 import { fillNoteStub, generateNoteFlashcards, generateNoteSummary, type NoteFlashcards, type NoteSummary } from "@/lib/api/ai.functions";
 import { getCachedResponse, hashPrompt, setCachedResponse, type StubReference } from "@/lib/ai/llm";
+import { getSemanticContext, syncContentCardEmbedding } from "@/lib/api/embeddings.functions";
 
 
 export const Route = createFileRoute("/_authenticated/subjects/$id")({
@@ -391,9 +392,12 @@ function SubjectVault() {
       const { error } = await supabase.from("content_cards").update(rest).eq("id", cardId);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_result, patch) => {
       toast.success("Nota salva");
       qc.invalidateQueries({ queryKey: ["cards", id] });
+      if (patch.text_content?.trim()) {
+        void syncContentCardEmbedding({ data: { noteId: patch.id, content: patch.text_content } }).catch((error) => console.error("Embedding sync failed", error));
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -450,11 +454,13 @@ function SubjectVault() {
     mutationFn: async ({ noteId, source, topic, subjectName, references }: {
       noteId: string; source: string; topic: string; subjectName: string; references: StubReference[];
     }) => {
-      const hash = await hashPrompt(JSON.stringify({ feature: "note-stub-fill-v1", topic, subjectName, references }));
+      const semantic = await getSemanticContext({ data: { topic, subjectId: id } }).catch(() => ({ references: [] }));
+      const contextReferences = semantic.references.length > 0 ? semantic.references : references;
+      const hash = await hashPrompt(JSON.stringify({ feature: "note-stub-fill-v1", topic, subjectName, references: contextReferences }));
       const cached = getCachedResponse(hash);
       if (cached) return { noteId, source, content: cached };
 
-      const { content } = await fillNoteStub({ data: { topic, subject: subjectName, references } });
+      const { content } = await fillNoteStub({ data: { topic, subject: subjectName, references: contextReferences } });
       setCachedResponse(hash, content);
       return { noteId, source, content };
     },
