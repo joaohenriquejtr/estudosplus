@@ -5,6 +5,9 @@ import { format, isToday, parseISO, differenceInCalendarDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Sparkles, CalendarClock, ListChecks, CalendarRange, Clock } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { getOrCreateDailyPlan, updateDailyPlan } from "@/lib/api/plans.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Painel — Estudo+" }] }),
@@ -20,7 +23,11 @@ const motivacionais = [
 ];
 
 function Dashboard() {
+  const qc = useQueryClient();
   const today = new Date().toISOString().slice(0, 10);
+  const { data: dailyPlan } = useQuery({ queryKey: ["daily-plan", today], queryFn: () => getOrCreateDailyPlan({ data: { date: today } }), enabled: false });
+  const planMutation = useMutation({ mutationFn: () => getOrCreateDailyPlan({ data: { date: today } }), onSuccess: (data) => qc.setQueryData(["daily-plan", today], data) });
+  const planUpdate = useMutation({ mutationFn: updateDailyPlan, onSuccess: (data) => qc.setQueryData(["daily-plan", today], data) });
 
   const { data: tasks = [] } = useQuery({
     queryKey: ["tasks-today", today],
@@ -152,6 +159,11 @@ function Dashboard() {
             })}
           </ul>
         )}
+      </section>
+
+      <section className="glass-card border-l-2 border-l-primary p-5">
+        <header className="mb-3 flex items-center gap-2"><span className="text-primary">🎯</span><h2 className="font-display font-semibold">Plano de hoje</h2></header>
+        {!dailyPlan ? <Button onClick={() => planMutation.mutate()} disabled={planMutation.isPending}>{planMutation.isPending ? "Gerando…" : "Gerar meu plano de hoje"}</Button> : <div className="space-y-3"><h3 className="font-medium">{dailyPlan.title}</h3><p className="text-sm text-muted-foreground">{dailyPlan.description}</p><ul className="space-y-2">{dailyPlan.items.map((entry: any, index: number) => <li key={`${entry.note_id}-${index}`} className="flex items-start gap-2 text-sm"><input type="checkbox" checked={entry.completed} onChange={() => { const items = dailyPlan.items.map((item: any, i: number) => i === index ? { ...item, completed: !item.completed } : item); planUpdate.mutate({ data: { id: dailyPlan.id, items, completed: items.every((item: any) => item.completed) } }); }} /><span className={entry.completed ? "text-muted-foreground line-through" : ""}>{entry.title}<small className="block text-xs text-muted-foreground">{entry.reason}</small></span></li>)}</ul></div>}
       </section>
 
 
