@@ -77,6 +77,39 @@ Retorne somente o objeto JSON válido. Não use markdown, bloco de código, tít
   };
 }
 
+export type StubReference = {
+  title: string;
+  content: string;
+};
+
+/** Builds a constrained request to turn mentions of a stub into an editable draft. */
+export function createStubFillRequest(
+  topic: string,
+  subject: string,
+  references: StubReference[],
+): LLMRequest {
+  const context = references
+    .map((reference, index) => `Anotação ${index + 1} — ${reference.title}:\n${reference.content}`)
+    .join("\n\n---\n\n");
+
+  return {
+    systemPrompt: "Você é um tutor cuidadoso. Use português do Brasil, linguagem simples e direta.",
+    prompt: `Você está ajudando um estudante a completar uma nota vazia.
+O tópico é: ${topic}
+Matéria: ${subject}
+
+Baseado APENAS nas anotações do estudante abaixo, escreva uma explicação clara e didática sobre o tópico.
+Não invente informações que não estejam nas anotações. Se houver lacunas, mencione que o estudante precisa complementar.
+
+Anotações relevantes:
+${context}
+
+Formato: 3-4 parágrafos em português, linguagem simples, como se fosse uma aula. Retorne somente o conteúdo da explicação, sem título, markdown ou texto introdutório.`,
+    temperature: 0.3,
+    maxTokens: 900,
+  };
+}
+
 /** Creates the SHA-256 key used by the local response cache. */
 export async function hashPrompt(prompt: string): Promise<string> {
   const data = new TextEncoder().encode(prompt);

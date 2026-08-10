@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Markdown } from "@/components/Markdown";
-import { ChevronLeft, ChevronRight, Eye, ExternalLink, Layers3, Link2, Pencil, Save, Sparkles, X } from "lucide-react";
+import { BrainCircuit, ChevronLeft, ChevronRight, Eye, ExternalLink, Layers3, Link2, Pencil, Save, Sparkles, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -36,9 +36,15 @@ interface NoteViewProps {
   flashcards?: NoteFlashcards;
   generatingFlashcards?: boolean;
   onGenerateFlashcards?: () => void;
+  isStub?: boolean;
+  stubMentionCount?: number;
+  stubReferenceCount?: number;
+  fillingStub?: boolean;
+  generatedStubContent?: string;
+  onFillStub?: () => void;
 }
 
-export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCreateNote, onSave, saving, summary, generatingSummary = false, onGenerateSummary, flashcards, generatingFlashcards = false, onGenerateFlashcards }: NoteViewProps) {
+export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCreateNote, onSave, saving, summary, generatingSummary = false, onGenerateSummary, flashcards, generatingFlashcards = false, onGenerateFlashcards, isStub = false, stubMentionCount = 0, stubReferenceCount = 0, fillingStub = false, generatedStubContent, onFillStub }: NoteViewProps) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
@@ -47,6 +53,7 @@ export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCr
   const [viewUrl, setViewUrl] = useState<string | null>(null);
   const [flashcardIndex, setFlashcardIndex] = useState(0);
   const [showFlashcardAnswer, setShowFlashcardAnswer] = useState(false);
+  const [stubIgnored, setStubIgnored] = useState(false);
   const textRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -55,7 +62,14 @@ export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCr
     setText(note.text_content ?? "");
     setCategory(note.category ?? "anotacao");
     setFolderId(note.chapter_id ?? null);
+    setStubIgnored(false);
   }, [note.id]);
+
+  useEffect(() => {
+    if (!generatedStubContent) return;
+    setText(generatedStubContent);
+    setEditing(true);
+  }, [generatedStubContent]);
 
   useEffect(() => {
     setFlashcardIndex(0);
@@ -159,6 +173,27 @@ export function NoteView({ note, folders, wikiNotes, backlinks, onOpenNote, onCr
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto px-4 py-4 sm:px-6">
+        {!editing && isStub && !stubIgnored && (
+          <section className="mb-5 rounded-lg border border-primary/40 bg-primary/5 p-4" aria-label="Nota vazia com sugestões de IA">
+            <div className="flex gap-3">
+              <BrainCircuit className="mt-0.5 size-5 shrink-0 text-primary" />
+              <div className="min-w-0 flex-1">
+                <h2 className="font-medium">Esta nota está vazia</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {stubMentionCount > 0
+                    ? `Detectei ${stubMentionCount} ${stubMentionCount === 1 ? "menção" : "menções"} em outras notas e vou usar até ${stubReferenceCount} como contexto.`
+                    : "Ainda não encontrei menções desta nota em outros conteúdos."}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button size="sm" onClick={onFillStub} disabled={stubReferenceCount === 0 || fillingStub}>
+                    <BrainCircuit className="mr-1.5 size-4" />{fillingStub ? "Preenchendo…" : "Preencher com IA"}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setStubIgnored(true)}>Ignorar</Button>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
         {editing ? (
           <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-3">

@@ -17,8 +17,8 @@ import { VaultTree, NoteIcon, noteLabel, type VaultFolder, type VaultNote } from
 import { NoteView, CATEGORIES } from "@/components/vault/NoteView";
 import { cn } from "@/lib/utils";
 import { NOTE_TEMPLATES, DEFAULT_TEMPLATE_ID, renderTemplate } from "@/lib/note-templates";
-import { generateNoteFlashcards, generateNoteSummary, type NoteFlashcards, type NoteSummary } from "@/lib/api/ai.functions";
-import { getCachedResponse, hashPrompt, setCachedResponse } from "@/lib/ai/llm";
+import { fillNoteStub, generateNoteFlashcards, generateNoteSummary, type NoteFlashcards, type NoteSummary } from "@/lib/api/ai.functions";
+import { getCachedResponse, hashPrompt, setCachedResponse, type StubReference } from "@/lib/ai/llm";
 
 
 export const Route = createFileRoute("/_authenticated/subjects/$id")({
@@ -75,6 +75,13 @@ const isNoteFlashcards = (value: unknown): value is NoteFlashcards => {
     });
 };
 
+const isStubNote = (note: { title?: string | null; text_content?: string | null }) => {
+  const content = note.text_content?.trim() ?? "";
+  if (!content) return true;
+  // Existing wikilink stubs are initialized as a single Markdown heading.
+  return !!note.title?.trim() && content === `# ${note.title.trim()}`;
+};
+
 function SubjectVault() {
   const { confirm: confirmAction, confirmDialog } = useConfirm();
   const { id } = Route.useParams();
@@ -91,6 +98,7 @@ function SubjectVault() {
   const [search, setSearch] = useState("");
   const [noteSummary, setNoteSummary] = useState<{ noteId: string; source: string; data: NoteSummary } | null>(null);
   const [noteFlashcards, setNoteFlashcards] = useState<{ noteId: string; source: string; data: NoteFlashcards } | null>(null);
+  const [stubDraft, setStubDraft] = useState<{ noteId: string; source: string; content: string } | null>(null);
 
   const [newFolderParent, setNewFolderParent] = useState<string | null | undefined>(undefined);
   const [newFolderTitle, setNewFolderTitle] = useState("");
@@ -225,6 +233,29 @@ function SubjectVault() {
     const current = normalizeNoteTitle(activeNote.title);
     return cards.filter((c) => c.id !== activeNote.id && extractWikiLinks(c.text_content).some((l) => normalizeNoteTitle(l) === current));
   }, [cards, activeNote]);
+
+  const stubReferences = useMemo(() => {
+    if (!activeNote?.title || !isStubNote(activeNote)) return [];
+    const target = normalizeNoteTitle(activeNote.title);
+    return backlinks
+      .map((note) => ({
+        title: note.title?.trim() || "Sem título",
+        content: (note.text_content?.trim() ?? "").slice(0, 20_000),
+        mentions: extractWikiLinks(note.text_content).filter((link) => normalizeNoteTitle(link) === target).length,
+        createdAt: new Date(note.created_at).getTime(),
+      }))
+      .filter((note) => note.content)
+      .sort((left, right) => right.mentions - left.mentions || right.createdAt - left.createdAt)
+      .slice(0, 3)
+      .map(({ title, content }) => ({ title, content }));
+  }, [activeNote, backlinks]);
+
+  const stubMentionCount = useMemo(() => {
+    if (!activeNote?.title || !isStubNote(activeNote)) return 0;
+    const target = normalizeNoteTitle(activeNote.title);
+    return backlinks.reduce((total, note) => total + extractWikiLinks(note.text_content)
+      .filter((link) => normalizeNoteTitle(link) === target).length, 0);
+  }, [activeNote, backlinks]);
 
   const searchResults = useMemo(() => {
     const q = search.trim().toLocaleLowerCase("pt-BR");
@@ -413,6 +444,25 @@ function SubjectVault() {
       toast.success("5 flashcards gerados");
     },
     onError: (error: Error) => toast.error(error.message || "Não foi possível gerar os flashcards."),
+  });
+
+  const fillStub = useMutation({
+    mutationFn: async ({ noteId, source, topic, subjectName, references }: {
+      noteId: string; source: string; topic: string; subjectName: string; references: StubReference[];
+    }) => {
+      const hash = await hashPrompt(JSON.stringify({ feature: "note-stub-fill-v1", topic, subjectName, references }));
+      const cached = getCachedResponse(hash);
+      if (cached) return { noteId, source, content: cached };
+
+      const { content } = await fillNoteStub({ data: { topic, subject: subjectName, references } });
+      setCachedResponse(hash, content);
+      return { noteId, source, content };
+    },
+    onSuccess: ({ noteId, source, content }) => {
+      setStubDraft({ noteId, source, content });
+      toast.success("Rascunho criado. Revise e salve quando estiver pronto.");
+    },
+    onError: (error: Error) => toast.error(error.message || "Não foi possível preencher a nota."),
   });
 
   const removeNote = useMutation({
@@ -656,6 +706,18 @@ function SubjectVault() {
               onGenerateFlashcards={() => generateFlashcards.mutate({
                 noteId: activeNote.id,
                 content: activeNote.text_content ?? "",
+              })}
+              isStub={isStubNote(activeNote)}
+              stubMentionCount={stubMentionCount}
+              stubReferenceCount={stubReferences.length}
+              fillingStub={fillStub.isPending}
+              generatedStubContent={stubDraft?.noteId === activeNote.id && stubDraft.source === (activeNote.text_content ?? "") ? stubDraft.content : undefined}
+              onFillStub={() => fillStub.mutate({
+                noteId: activeNote.id,
+                source: activeNote.text_content ?? "",
+                topic: activeNote.title?.trim() || "Sem título",
+                subjectName: subject?.name ?? "Matéria",
+                references: stubReferences,
               })}
             />
           ) : (
