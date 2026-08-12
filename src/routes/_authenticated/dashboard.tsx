@@ -7,7 +7,8 @@ import { Sparkles, CalendarClock, ListChecks, CalendarRange, Clock } from "lucid
 import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { getOrCreateDailyPlan, updateDailyPlan } from "@/lib/api/plans.functions";
+import { toast } from "sonner";
+import { getDailyPlan, getOrCreateDailyPlan, updateDailyPlan } from "@/lib/api/plans.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Painel — Estudo+" }] }),
@@ -25,9 +26,28 @@ const motivacionais = [
 function Dashboard() {
   const qc = useQueryClient();
   const today = new Date().toISOString().slice(0, 10);
-  const { data: dailyPlan } = useQuery({ queryKey: ["daily-plan", today], queryFn: () => getOrCreateDailyPlan({ data: { date: today } }), enabled: false });
-  const planMutation = useMutation({ mutationFn: () => getOrCreateDailyPlan({ data: { date: today } }), onSuccess: (data) => qc.setQueryData(["daily-plan", today], data) });
-  const planUpdate = useMutation({ mutationFn: updateDailyPlan, onSuccess: (data) => qc.setQueryData(["daily-plan", today], data) });
+  const { data: dailyPlan } = useQuery({
+    queryKey: ["daily-plan", today],
+    queryFn: () => getDailyPlan({ data: { date: today } }),
+  });
+  const planMutation = useMutation({
+    mutationFn: () => getOrCreateDailyPlan({ data: { date: today } }),
+    onSuccess: (data) => {
+      qc.setQueryData(["daily-plan", today], data);
+      toast.success("Seu plano de hoje está pronto.");
+    },
+    onError: (error: Error) => {
+      const message = /daily_plans.*does not exist|relation.*daily_plans/i.test(error.message)
+        ? "A tabela de planos ainda não foi criada no Supabase. Aplique a migration de planos diários."
+        : error.message || "Não foi possível gerar seu plano agora.";
+      toast.error(message);
+    },
+  });
+  const planUpdate = useMutation({
+    mutationFn: updateDailyPlan,
+    onSuccess: (data) => qc.setQueryData(["daily-plan", today], data),
+    onError: (error: Error) => toast.error(error.message || "Não foi possível atualizar o plano."),
+  });
 
   const { data: tasks = [] } = useQuery({
     queryKey: ["tasks-today", today],
