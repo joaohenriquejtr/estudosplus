@@ -6,7 +6,7 @@ Evoluir o EstudosPlus com IA de estudo, busca semântica, proficiência SRS, pla
 
 ## Onde o trabalho parou
 
-A Fase D foi publicada no commit `1afe2f6`. A correção de runtime de IA foi reforçada e publicada no commit `8effe1b`: as chaves são lidas pelo runtime Node durante a requisição, o timeout é compatível com runtimes Vercel e a NVIDIA é tentada mesmo se a Groq falhar por configuração.
+A Fase E (gaps por tópicos) foi implementada localmente e aguarda publicação/aplicação das migrations. A CLI do Supabase foi instalada em `/Users/jr/.local/bin`, mas o binário atual não inicia neste macOS por incompatibilidade com a biblioteca do sistema.
 
 ## Feito
 
@@ -18,6 +18,7 @@ A Fase D foi publicada no commit `1afe2f6`. A correção de runtime de IA foi re
 - Fase C: `daily_plans`, geração idempotente e card básico no Dashboard.
 - Geração do plano diário reforçada em `d5ff437`: o painel recarrega planos salvos, exibe feedback de sucesso/erro e a IA só pode selecionar notas reais do usuário.
 - Fase D publicada: hook `usePomodoroTimer`, reutilização em Foco e sessão gamificada com flashcards/SRS.
+- Fase E implementada localmente: migration `exam_topics`, tópicos editáveis de prova, análise semântica por tópico, painel expansível no Calendário, criação de stubs e inclusão idempotente no plano diário.
 - Commits publicados até `d5ff437`.
 - Diagnóstico de IA: o fallback usava um modelo NVIDIA inexistente; o serviço agora remove espaços acidentais das chaves, registra apenas metadados seguros de falhas e mostra erros de autenticação/permissão mais úteis.
 - Diagnóstico adicional de IA: apesar de estarem configuradas na Vercel, `GROQ_API_KEY` e `NVIDIA_API_KEY` podiam não chegar ao runtime porque eram lidas no escopo do módulo. `callGroq` e `callNVIDIA` agora fazem a leitura dentro das funções server-side.
@@ -36,6 +37,8 @@ A Fase D foi publicada no commit `1afe2f6`. A correção de runtime de IA foi re
 - `src/components/focus/TimerRing.tsx` e `useFocusSettings.ts` — peças reutilizáveis do timer.
 - `src/routes/_authenticated/dashboard.tsx` — Dashboard e plano diário.
 - `src/lib/api/plans.functions.ts` — busca, geração e atualização de planos diários.
+- `src/lib/api/exam-analysis.functions.ts` — extração, persistência e análise de tópicos de provas.
+- `src/routes/_authenticated/calendar.tsx` — formulário de prova e painel expansível de gaps.
 - Notas reais ficam em `content_cards`; a rota de nota é `/subjects/$id?note=$noteId`.
 - Migrations recentes: `20260810090000_add_semantic_note_search.sql`, `20260810093000_add_topic_proficiency.sql`, `20260810100000_add_daily_plans.sql`.
 
@@ -49,13 +52,14 @@ A Fase D foi publicada no commit `1afe2f6`. A correção de runtime de IA foi re
 
 ## Próximos passos
 
-1. Testar em produção o botão “Gerar meu plano de hoje” após o deploy de `d5ff437`.
-2. Aplicar as migrations pendentes no Supabase e testar a sessão em produção.
-3. Depois implementar Fase E (análise de gaps para provas) usando `events`/`event_subjects` e adaptar a ausência de rota de detalhe de prova.
+1. Publicar a implementação da Fase E e aplicar as migrations pendentes com Supabase CLI em ambiente macOS compatível/autenticado: `supabase db push`.
+2. Testar em produção o botão “Gerar meu plano de hoje”, criação de tópicos e o painel de análise de preparo.
+3. Corrigir/atualizar o Node local para habilitar lint e build locais.
 
 ## Bloqueios ou hipóteses
 
 - Variáveis remotas (`GROQ_API_KEY`, `NVIDIA_API_KEY`, `JINA_API_KEY`) não são verificáveis localmente sem acessar a Vercel; não registrar valores.
 - `npm run lint` ainda não inicia localmente porque `/usr/local/bin/node` é incompatível com a `libc++` do macOS. A validação de compilação deve ocorrer na Vercel ou após corrigir o Node local.
+- O Supabase CLI `2.114.0` instalado em `/Users/jr/.local/bin` também não inicia neste macOS (`___ulock_wait2` ausente), portanto não foi possível autenticar/vincular ou executar `supabase db push` daqui.
 - As migrations precisam estar aplicadas no projeto Supabase para as features de pgvector, SRS e planos funcionarem.
 - A especificação original usa `notes`/`exams`, mas o schema real usa `content_cards`/`events`; continuar usando o schema real.

@@ -16,6 +16,10 @@
 - Endurecido o runtime de IA em `8effe1b`: importação explícita de `node:process`, timeout via `AbortController` e tentativa da NVIDIA para qualquer falha da Groq. Erros de chave ausente, 401 e 403 agora são exibidos de forma diagnóstica e segura.
 - Corrigido o fluxo do plano diário em `d5ff437`: adicionado carregamento do plano já salvo, feedback visual de erro/sucesso, validação de IDs retornados pela IA e item de fallback para evitar falha quando a resposta não contiver uma nota válida.
 
+## 2026-08-12
+- Implementada localmente a Fase E: migration `20260812110000_add_exam_topics.sql`, serviço `exam-analysis.functions.ts` e integração ao Calendário com extração editável de tópicos, análise por evidências, stubs e plano diário.
+- Tentada a instalação/aplicação por Supabase CLI. A versão atual foi instalada, mas não inicia no macOS atual por incompatibilidade de biblioteca; migrations ainda não foram aplicadas remotamente.
+
 ## 2026-08-10
 - Fase C publicada em `cf2f719`: migration/API de `daily_plans` e card de geração no Dashboard.
 - Fase D não foi iniciada para evitar deixar refatoração parcial do timer.
