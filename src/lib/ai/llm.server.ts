@@ -1,3 +1,5 @@
+import process from "node:process";
+
 import type { LLMRequest, LLMResponse } from "./llm";
 
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
@@ -46,12 +48,14 @@ async function requestWithRetry(provider: "Groq" | "NVIDIA", endpoint: string, a
   const normalizedApiKey = apiKey?.trim();
   if (!normalizedApiKey) throw new ProviderError(provider, false, undefined, "Chave de API não configurada");
   for (let retry = 0; retry <= RETRY_DELAYS_MS.length; retry += 1) {
+    const abortController = new AbortController();
+    const timeout = setTimeout(() => abortController.abort(), 30_000);
     try {
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { Authorization: `Bearer ${normalizedApiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({ model, messages: req.messages, temperature: req.temperature ?? 0.3, max_tokens: req.maxTokens ?? 2_048, ...(req.jsonMode ? { response_format: { type: "json_object" } } : {}) }),
-        signal: AbortSignal.timeout(30_000),
+        signal: abortController.signal,
       });
       return await parseResponse(response, provider);
     } catch (error) {
@@ -60,6 +64,8 @@ async function requestWithRetry(provider: "Groq" | "NVIDIA", endpoint: string, a
         : new ProviderError(provider, true, undefined, error instanceof Error ? error.message : "Erro de rede");
       if (!providerError.retryable || retry === RETRY_DELAYS_MS.length) throw providerError;
       await sleep(RETRY_DELAYS_MS[retry]);
+    } finally {
+      clearTimeout(timeout);
     }
   }
   throw new ProviderError(provider, true, undefined, "Tentativas esgotadas");
@@ -90,11 +96,19 @@ function logProviderFailure(context: string, error: unknown) {
   console.error(context, { message: error instanceof Error ? error.message : "Erro desconhecido" });
 }
 
-function userFacingError(error: unknown): Error {
-  if (error instanceof ProviderError && error.status === 401) {
+function userFacingError(errors: unknown[]): Error {
+  const providerErrors = errors.filter((error): error is ProviderError => error instanceof ProviderError);
+  const missingProviders = providerErrors.filter((error) => error.message === "Chave de API não configurada");
+  if (missingProviders.length > 0) {
+    const names = missingProviders.map((error) => `${error.provider === "Groq" ? "GROQ_API_KEY" : "NVIDIA_API_KEY"}`).join(" e ");
+    return new Error(`A variável ${names} não está disponível no runtime da Vercel. Configure-a para Production e faça um novo deploy.`);
+  }
+  const authenticationFailure = providerErrors.find((error) => error.status === 401);
+  if (authenticationFailure) {
     return new Error("A chave do provedor de IA foi recusada. Verifique as variáveis de ambiente na Vercel e faça um novo deploy.");
   }
-  if (error instanceof ProviderError && error.status === 403) {
+  const permissionFailure = providerErrors.find((error) => error.status === 403);
+  if (permissionFailure) {
     return new Error("O acesso ao modelo de IA foi recusado pelo provedor. Verifique as permissões da chave configurada.");
   }
   return new Error("A IA está temporariamente indisponível. Tente novamente em alguns instantes.");
@@ -104,15 +118,11 @@ export async function generateWithAI(req: LLMRequest): Promise<LLMResponse> {
   try {
     return await callGroq(req);
   } catch (groqError) {
-    if (!(groqError instanceof ProviderError) || !groqError.retryable) {
-      logProviderFailure("Groq failed", groqError);
-      throw userFacingError(groqError);
-    }
     logProviderFailure("Groq failed, trying NVIDIA", groqError);
     try { return await callNVIDIA(req); }
     catch (nvidiaError) {
       logProviderFailure("NVIDIA fallback failed", nvidiaError);
-      throw userFacingError(nvidiaError);
+      throw userFacingError([groqError, nvidiaError]);
     }
   }
 }
