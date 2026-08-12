@@ -6,7 +6,7 @@ Evoluir o EstudosPlus com IA de estudo, busca semântica, proficiência SRS, pla
 
 ## Onde o trabalho parou
 
-A Fase D foi publicada no commit `1afe2f6`. A segunda correção de IA foi publicada no commit `a7711e0`: as chaves eram lidas no escopo do módulo, onde Nitro/Vite podia transformá-las em `undefined`; a leitura foi movida para o momento da requisição.
+A Fase D foi publicada no commit `1afe2f6`. A correção de runtime de IA foi reforçada e publicada no commit `8effe1b`: as chaves são lidas pelo runtime Node durante a requisição, o timeout é compatível com runtimes Vercel e a NVIDIA é tentada mesmo se a Groq falhar por configuração.
 
 ## Feito
 
@@ -20,6 +20,7 @@ A Fase D foi publicada no commit `1afe2f6`. A segunda correção de IA foi publi
 - Commits publicados até `e176770`.
 - Diagnóstico de IA: o fallback usava um modelo NVIDIA inexistente; o serviço agora remove espaços acidentais das chaves, registra apenas metadados seguros de falhas e mostra erros de autenticação/permissão mais úteis.
 - Diagnóstico adicional de IA: apesar de estarem configuradas na Vercel, `GROQ_API_KEY` e `NVIDIA_API_KEY` podiam não chegar ao runtime porque eram lidas no escopo do módulo. `callGroq` e `callNVIDIA` agora fazem a leitura dentro das funções server-side.
+- O serviço agora mostra uma mensagem específica se uma variável estiver ausente no runtime, a chave for recusada (401) ou o acesso ao modelo for negado (403), preservando os detalhes seguros no log do servidor.
 
 ## Arquivos e áreas relevantes
 
@@ -46,7 +47,7 @@ A Fase D foi publicada no commit `1afe2f6`. A segunda correção de IA foi publi
 
 ## Próximos passos
 
-1. Publicar e testar em produção a correção de leitura das variáveis de IA, verificando um resumo e flashcards.
+1. Testar em produção a correção de runtime dos provedores, verificando um resumo e flashcards após o deploy de `8effe1b`.
 2. Aplicar as migrations pendentes no Supabase e testar a sessão em produção.
 3. Depois implementar Fase E (análise de gaps para provas) usando `events`/`event_subjects` e adaptar a ausência de rota de detalhe de prova.
 

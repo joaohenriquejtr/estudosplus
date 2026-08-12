@@ -13,6 +13,7 @@
 - Lint local tentou executar, mas foi bloqueado pelo Node incompatível com a `libc++` do macOS.
 - Diagnosticada indisponibilidade de IA: o fallback NVIDIA usava `deepseek-ai/deepseek-v4`, identificador inexistente no endpoint NIM. Ajustado para `deepseek-ai/deepseek-v4-flash`, com logs seguros de status e mensagens específicas para falhas 401/403. Publicado em `e176770` (`fix: restore NVIDIA AI fallback`).
 - Diagnosticada causa raiz persistente da indisponibilidade: `llm.server.ts` lia as chaves da Vercel no escopo do módulo. A configuração do próprio projeto indica que Nitro/Vite pode resolver esses valores como `undefined` nesse ponto. Leitura transferida para `callGroq` e `callNVIDIA`; publicada em `a7711e0` (`fix: read AI keys at request time`).
+- Endurecido o runtime de IA em `8effe1b`: importação explícita de `node:process`, timeout via `AbortController` e tentativa da NVIDIA para qualquer falha da Groq. Erros de chave ausente, 401 e 403 agora são exibidos de forma diagnóstica e segura.
 
 ## 2026-08-10
 - Fase C publicada em `cf2f719`: migration/API de `daily_plans` e card de geração no Dashboard.
