@@ -6,7 +6,7 @@ Evoluir o EstudosPlus com IA de estudo, busca semântica, proficiência SRS, pla
 
 ## Onde o trabalho parou
 
-A Fase D foi implementada localmente e está pronta para validação/commit: o relógio foi extraído de `foco.tsx` e a rota `/study/session?noteId=...` foi criada. Ainda não foi publicada nesta atualização de memória.
+A Fase D foi implementada e publicada no commit `1afe2f6`: o relógio foi extraído de `foco.tsx` e a rota `/study/session?noteId=...` foi criada.
 
 ## Feito
 
@@ -16,7 +16,7 @@ A Fase D foi implementada localmente e está pronta para validação/commit: o r
 - Jina embeddings + pgvector semântico adaptados para `content_cards`.
 - SRS `topic_proficiency`, RPCs e avaliação Acertei/Errei nos flashcards.
 - Fase C: `daily_plans`, geração idempotente e card básico no Dashboard.
-- Fase D local: hook `usePomodoroTimer`, reutilização em Foco e sessão gamificada com flashcards/SRS.
+- Fase D publicada: hook `usePomodoroTimer`, reutilização em Foco e sessão gamificada com flashcards/SRS.
 - Commits publicados até `cf2f719`.
 
 ## Arquivos e áreas relevantes
@@ -44,7 +44,7 @@ A Fase D foi implementada localmente e está pronta para validação/commit: o r
 
 ## Próximos passos
 
-1. Validar, commitar e publicar a Fase D.
+1. Aplicar as migrations pendentes no Supabase e testar a sessão em produção.
 2. Depois implementar Fase E (análise de gaps para provas) usando `events`/`event_subjects` e adaptar a ausência de rota de detalhe de prova.
 
 ## Bloqueios ou hipóteses
