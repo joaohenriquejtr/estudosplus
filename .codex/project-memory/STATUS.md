@@ -16,8 +16,9 @@ A Fase D foi publicada no commit `1afe2f6`. A correção de runtime de IA foi re
 - Jina embeddings + pgvector semântico adaptados para `content_cards`.
 - SRS `topic_proficiency`, RPCs e avaliação Acertei/Errei nos flashcards.
 - Fase C: `daily_plans`, geração idempotente e card básico no Dashboard.
+- Geração do plano diário reforçada em `d5ff437`: o painel recarrega planos salvos, exibe feedback de sucesso/erro e a IA só pode selecionar notas reais do usuário.
 - Fase D publicada: hook `usePomodoroTimer`, reutilização em Foco e sessão gamificada com flashcards/SRS.
-- Commits publicados até `e176770`.
+- Commits publicados até `d5ff437`.
 - Diagnóstico de IA: o fallback usava um modelo NVIDIA inexistente; o serviço agora remove espaços acidentais das chaves, registra apenas metadados seguros de falhas e mostra erros de autenticação/permissão mais úteis.
 - Diagnóstico adicional de IA: apesar de estarem configuradas na Vercel, `GROQ_API_KEY` e `NVIDIA_API_KEY` podiam não chegar ao runtime porque eram lidas no escopo do módulo. `callGroq` e `callNVIDIA` agora fazem a leitura dentro das funções server-side.
 - O serviço agora mostra uma mensagem específica se uma variável estiver ausente no runtime, a chave for recusada (401) ou o acesso ao modelo for negado (403), preservando os detalhes seguros no log do servidor.
@@ -34,6 +35,7 @@ A Fase D foi publicada no commit `1afe2f6`. A correção de runtime de IA foi re
 - `src/routes/_authenticated/study.session.tsx` — sessão gamificada.
 - `src/components/focus/TimerRing.tsx` e `useFocusSettings.ts` — peças reutilizáveis do timer.
 - `src/routes/_authenticated/dashboard.tsx` — Dashboard e plano diário.
+- `src/lib/api/plans.functions.ts` — busca, geração e atualização de planos diários.
 - Notas reais ficam em `content_cards`; a rota de nota é `/subjects/$id?note=$noteId`.
 - Migrations recentes: `20260810090000_add_semantic_note_search.sql`, `20260810093000_add_topic_proficiency.sql`, `20260810100000_add_daily_plans.sql`.
 
@@ -47,7 +49,7 @@ A Fase D foi publicada no commit `1afe2f6`. A correção de runtime de IA foi re
 
 ## Próximos passos
 
-1. Testar em produção a correção de runtime dos provedores, verificando um resumo e flashcards após o deploy de `8effe1b`.
+1. Testar em produção o botão “Gerar meu plano de hoje” após o deploy de `d5ff437`.
 2. Aplicar as migrations pendentes no Supabase e testar a sessão em produção.
 3. Depois implementar Fase E (análise de gaps para provas) usando `events`/`event_subjects` e adaptar a ausência de rota de detalhe de prova.
 
