@@ -6,7 +6,7 @@ Evoluir o EstudosPlus com IA de estudo, busca semântica, proficiência SRS, pla
 
 ## Onde o trabalho parou
 
-A Fase D foi publicada no commit `1afe2f6`. Está em andamento uma correção do fallback de IA: o identificador NVIDIA inválido `deepseek-ai/deepseek-v4` foi trocado por `deepseek-ai/deepseek-v4-flash` antes da publicação do ajuste.
+A Fase D foi publicada no commit `1afe2f6`. A correção do fallback de IA foi publicada no commit `e176770`: o identificador NVIDIA inválido `deepseek-ai/deepseek-v4` foi trocado por `deepseek-ai/deepseek-v4-flash`.
 
 ## Feito
 
@@ -17,7 +17,7 @@ A Fase D foi publicada no commit `1afe2f6`. Está em andamento uma correção do
 - SRS `topic_proficiency`, RPCs e avaliação Acertei/Errei nos flashcards.
 - Fase C: `daily_plans`, geração idempotente e card básico no Dashboard.
 - Fase D publicada: hook `usePomodoroTimer`, reutilização em Foco e sessão gamificada com flashcards/SRS.
-- Commits publicados até `1afe2f6`.
+- Commits publicados até `e176770`.
 - Diagnóstico de IA: o fallback usava um modelo NVIDIA inexistente; o serviço agora remove espaços acidentais das chaves, registra apenas metadados seguros de falhas e mostra erros de autenticação/permissão mais úteis.
 
 ## Arquivos e áreas relevantes
