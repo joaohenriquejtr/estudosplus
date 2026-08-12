@@ -6,7 +6,7 @@ Evoluir o EstudosPlus com IA de estudo, busca semântica, proficiência SRS, pla
 
 ## Onde o trabalho parou
 
-A Fase D foi publicada no commit `1afe2f6`. A correção do fallback de IA foi publicada no commit `e176770`: o identificador NVIDIA inválido `deepseek-ai/deepseek-v4` foi trocado por `deepseek-ai/deepseek-v4-flash`.
+A Fase D foi publicada no commit `1afe2f6`. Uma segunda correção de IA está pronta para publicação: as chaves eram lidas no escopo do módulo, onde Nitro/Vite pode transformá-las em `undefined`; a leitura foi movida para o momento da requisição.
 
 ## Feito
 
@@ -19,6 +19,7 @@ A Fase D foi publicada no commit `1afe2f6`. A correção do fallback de IA foi p
 - Fase D publicada: hook `usePomodoroTimer`, reutilização em Foco e sessão gamificada com flashcards/SRS.
 - Commits publicados até `e176770`.
 - Diagnóstico de IA: o fallback usava um modelo NVIDIA inexistente; o serviço agora remove espaços acidentais das chaves, registra apenas metadados seguros de falhas e mostra erros de autenticação/permissão mais úteis.
+- Diagnóstico adicional de IA: apesar de estarem configuradas na Vercel, `GROQ_API_KEY` e `NVIDIA_API_KEY` podiam não chegar ao runtime porque eram lidas no escopo do módulo. `callGroq` e `callNVIDIA` agora fazem a leitura dentro das funções server-side.
 
 ## Arquivos e áreas relevantes
 
@@ -45,7 +46,7 @@ A Fase D foi publicada no commit `1afe2f6`. A correção do fallback de IA foi p
 
 ## Próximos passos
 
-1. Publicar e testar em produção a correção do fallback de IA, verificando um resumo e flashcards.
+1. Publicar e testar em produção a correção de leitura das variáveis de IA, verificando um resumo e flashcards.
 2. Aplicar as migrations pendentes no Supabase e testar a sessão em produção.
 3. Depois implementar Fase E (análise de gaps para provas) usando `events`/`event_subjects` e adaptar a ausência de rota de detalhe de prova.
 

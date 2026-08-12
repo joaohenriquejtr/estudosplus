@@ -65,8 +65,15 @@ async function requestWithRetry(provider: "Groq" | "NVIDIA", endpoint: string, a
   throw new ProviderError(provider, true, undefined, "Tentativas esgotadas");
 }
 
-export const callGroq = (req: LLMRequest) => requestWithRetry("Groq", GROQ_ENDPOINT, process.env.GROQ_API_KEY, GROQ_MODEL, req);
-export const callNVIDIA = (req: LLMRequest) => requestWithRetry("NVIDIA", NVIDIA_ENDPOINT, process.env.NVIDIA_API_KEY, NVIDIA_MODEL, req);
+// Read environment variables only while the Server Function is executing.
+// Nitro/Vite can replace module-scope process.env accesses at build time.
+export function callGroq(req: LLMRequest) {
+  return requestWithRetry("Groq", GROQ_ENDPOINT, process.env.GROQ_API_KEY, GROQ_MODEL, req);
+}
+
+export function callNVIDIA(req: LLMRequest) {
+  return requestWithRetry("NVIDIA", NVIDIA_ENDPOINT, process.env.NVIDIA_API_KEY, NVIDIA_MODEL, req);
+}
 
 function logProviderFailure(context: string, error: unknown) {
   if (error instanceof ProviderError) {
