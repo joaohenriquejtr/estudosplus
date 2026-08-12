@@ -2,8 +2,20 @@
 import { createMiddleware } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
 import { createClient } from '@supabase/supabase-js'
+import { Buffer } from 'node:buffer'
 import type { Database } from './types'
 
+function getTokenIssuer(token: string): string | null {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const json = Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
+    const issuer = (JSON.parse(json) as { iss?: unknown }).iss;
+    return typeof issuer === 'string' ? issuer : null;
+  } catch {
+    return null;
+  }
+}
 
 
 export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server(
@@ -65,6 +77,13 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
     // stale signing-key cache from rejecting a freshly-created account.
     const { data, error } = await supabase.auth.getUser(token);
     if (error || !data?.user) {
+      const tokenIssuer = getTokenIssuer(token);
+      const expectedIssuer = SUPABASE_URL.replace(/\/$/, '') + '/auth/v1';
+      if (tokenIssuer && tokenIssuer !== expectedIssuer) {
+        console.error('[Supabase] session/server project mismatch', { tokenIssuer, expectedIssuer });
+        throw new Error(`Sua sessão pertence a ${tokenIssuer}, mas o servidor está configurado para ${SUPABASE_URL}. Na Vercel, deixe SUPABASE_URL e VITE_SUPABASE_URL iguais ao projeto da sua conta e faça um novo deploy.`);
+      }
+      console.error('[Supabase] session validation failed', { expectedIssuer, message: error?.message });
       throw new Error('Unauthorized: Invalid token');
     }
 
