@@ -11,6 +11,7 @@
 - Criada `src/routes/_authenticated/study.session.tsx` com Pomodoro, geração de flashcards, SRS, pausa ao revelar resposta e resumo final.
 - Publicada em `1afe2f6` (`feat: add gamified study session`).
 - Lint local tentou executar, mas foi bloqueado pelo Node incompatível com a `libc++` do macOS.
+- Diagnosticada indisponibilidade de IA: o fallback NVIDIA usava `deepseek-ai/deepseek-v4`, identificador inexistente no endpoint NIM. Ajustado para `deepseek-ai/deepseek-v4-flash`, com logs seguros de status e mensagens específicas para falhas 401/403. Publicação pendente neste ponto.
 
 ## 2026-08-10
 - Fase C publicada em `cf2f719`: migration/API de `daily_plans` e card de geração no Dashboard.

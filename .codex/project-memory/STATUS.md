@@ -6,18 +6,19 @@ Evoluir o EstudosPlus com IA de estudo, busca semântica, proficiência SRS, pla
 
 ## Onde o trabalho parou
 
-A Fase D foi implementada e publicada no commit `1afe2f6`: o relógio foi extraído de `foco.tsx` e a rota `/study/session?noteId=...` foi criada.
+A Fase D foi publicada no commit `1afe2f6`. Está em andamento uma correção do fallback de IA: o identificador NVIDIA inválido `deepseek-ai/deepseek-v4` foi trocado por `deepseek-ai/deepseek-v4-flash` antes da publicação do ajuste.
 
 ## Feito
 
 - Features 1–4: resumo, flashcards, preenchimento de stubs, chat socrático.
-- Groq primário (`llama-3.3-70b-versatile`) com NVIDIA NIM fallback (`deepseek-ai/deepseek-v4`); Google removido do código.
+- Groq primário (`llama-3.3-70b-versatile`) com NVIDIA NIM fallback (`deepseek-ai/deepseek-v4-flash`); Google removido do código.
 - Retry de provedores, JSON mode e cache local.
 - Jina embeddings + pgvector semântico adaptados para `content_cards`.
 - SRS `topic_proficiency`, RPCs e avaliação Acertei/Errei nos flashcards.
 - Fase C: `daily_plans`, geração idempotente e card básico no Dashboard.
 - Fase D publicada: hook `usePomodoroTimer`, reutilização em Foco e sessão gamificada com flashcards/SRS.
-- Commits publicados até `cf2f719`.
+- Commits publicados até `1afe2f6`.
+- Diagnóstico de IA: o fallback usava um modelo NVIDIA inexistente; o serviço agora remove espaços acidentais das chaves, registra apenas metadados seguros de falhas e mostra erros de autenticação/permissão mais úteis.
 
 ## Arquivos e áreas relevantes
 
@@ -44,11 +45,13 @@ A Fase D foi implementada e publicada no commit `1afe2f6`: o relógio foi extra�
 
 ## Próximos passos
 
-1. Aplicar as migrations pendentes no Supabase e testar a sessão em produção.
-2. Depois implementar Fase E (análise de gaps para provas) usando `events`/`event_subjects` e adaptar a ausência de rota de detalhe de prova.
+1. Publicar e testar em produção a correção do fallback de IA, verificando um resumo e flashcards.
+2. Aplicar as migrations pendentes no Supabase e testar a sessão em produção.
+3. Depois implementar Fase E (análise de gaps para provas) usando `events`/`event_subjects` e adaptar a ausência de rota de detalhe de prova.
 
 ## Bloqueios ou hipóteses
 
 - Variáveis remotas (`GROQ_API_KEY`, `NVIDIA_API_KEY`, `JINA_API_KEY`) não são verificáveis localmente sem acessar a Vercel; não registrar valores.
+- `npm run lint` ainda não inicia localmente porque `/usr/local/bin/node` é incompatível com a `libc++` do macOS. A validação de compilação deve ocorrer na Vercel ou após corrigir o Node local.
 - As migrations precisam estar aplicadas no projeto Supabase para as features de pgvector, SRS e planos funcionarem.
 - A especificação original usa `notes`/`exams`, mas o schema real usa `content_cards`/`events`; continuar usando o schema real.
