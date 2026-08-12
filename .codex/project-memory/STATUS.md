@@ -6,7 +6,7 @@ Evoluir o EstudosPlus com IA de estudo, busca semântica, proficiência SRS, pla
 
 ## Onde o trabalho parou
 
-A Fase D foi publicada no commit `1afe2f6`. Uma segunda correção de IA está pronta para publicação: as chaves eram lidas no escopo do módulo, onde Nitro/Vite pode transformá-las em `undefined`; a leitura foi movida para o momento da requisição.
+A Fase D foi publicada no commit `1afe2f6`. A segunda correção de IA foi publicada no commit `a7711e0`: as chaves eram lidas no escopo do módulo, onde Nitro/Vite podia transformá-las em `undefined`; a leitura foi movida para o momento da requisição.
 
 ## Feito
 

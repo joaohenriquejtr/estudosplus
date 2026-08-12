@@ -12,7 +12,7 @@
 - Publicada em `1afe2f6` (`feat: add gamified study session`).
 - Lint local tentou executar, mas foi bloqueado pelo Node incompatível com a `libc++` do macOS.
 - Diagnosticada indisponibilidade de IA: o fallback NVIDIA usava `deepseek-ai/deepseek-v4`, identificador inexistente no endpoint NIM. Ajustado para `deepseek-ai/deepseek-v4-flash`, com logs seguros de status e mensagens específicas para falhas 401/403. Publicado em `e176770` (`fix: restore NVIDIA AI fallback`).
-- Diagnosticada causa raiz persistente da indisponibilidade: `llm.server.ts` lia as chaves da Vercel no escopo do módulo. A configuração do próprio projeto indica que Nitro/Vite pode resolver esses valores como `undefined` nesse ponto. Leitura transferida para `callGroq` e `callNVIDIA`; publicação pendente neste ponto.
+- Diagnosticada causa raiz persistente da indisponibilidade: `llm.server.ts` lia as chaves da Vercel no escopo do módulo. A configuração do próprio projeto indica que Nitro/Vite pode resolver esses valores como `undefined` nesse ponto. Leitura transferida para `callGroq` e `callNVIDIA`; publicada em `a7711e0` (`fix: read AI keys at request time`).
 
 ## 2026-08-10
 - Fase C publicada em `cf2f719`: migration/API de `daily_plans` e card de geração no Dashboard.
