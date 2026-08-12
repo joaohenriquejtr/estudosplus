@@ -20,6 +20,7 @@ import { Route as AuthenticatedGraphRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedFocoRouteImport } from './routes/_authenticated/foco'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
+import { Route as AuthenticatedStudySessionRouteImport } from './routes/_authenticated/study.session'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedSubjectsIndexRouteImport } from './routes/_authenticated/subjects.index'
@@ -81,6 +82,11 @@ const AuthenticatedCalendarRoute = AuthenticatedCalendarRouteImport.update({
   path: '/calendar',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedStudySessionRoute = AuthenticatedStudySessionRouteImport.update({
+  id: '/study/session',
+  path: '/study/session',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const Char91DotwellKnownChar93OauthProtectedResourceRoute =
   Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
     id: '/.well-known/oauth-protected-resource',
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/calendar': typeof AuthenticatedCalendarRoute
+  '/study/session': typeof AuthenticatedStudySessionRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/foco': typeof AuthenticatedFocoRoute
   '/graph': typeof AuthenticatedGraphRoute
@@ -141,6 +148,7 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/calendar': typeof AuthenticatedCalendarRoute
+  '/study/session': typeof AuthenticatedStudySessionRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/foco': typeof AuthenticatedFocoRoute
   '/graph': typeof AuthenticatedGraphRoute
@@ -161,6 +169,7 @@ export interface FileRoutesById {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
+  '/_authenticated/study/session': typeof AuthenticatedStudySessionRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/foco': typeof AuthenticatedFocoRoute
   '/_authenticated/graph': typeof AuthenticatedGraphRoute
@@ -181,6 +190,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/calendar'
+    | '/study/session'
     | '/dashboard'
     | '/foco'
     | '/graph'
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/calendar'
+    | '/study/session'
     | '/dashboard'
     | '/foco'
     | '/graph'
@@ -218,6 +229,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/calendar'
+    | '/_authenticated/study/session'
     | '/_authenticated/dashboard'
     | '/_authenticated/foco'
     | '/_authenticated/graph'
@@ -320,6 +332,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCalendarRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/study/session': {
+      id: '/_authenticated/study/session'
+      path: '/study/session'
+      fullPath: '/study/session'
+      preLoaderRoute: typeof AuthenticatedStudySessionRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/.well-known/oauth-protected-resource': {
       id: '/.well-known/oauth-protected-resource'
       path: '/.well-known/oauth-protected-resource'
@@ -367,6 +386,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
+  AuthenticatedStudySessionRoute: typeof AuthenticatedStudySessionRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedFocoRoute: typeof AuthenticatedFocoRoute
   AuthenticatedGraphRoute: typeof AuthenticatedGraphRoute
@@ -379,6 +399,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
+  AuthenticatedStudySessionRoute: AuthenticatedStudySessionRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedFocoRoute: AuthenticatedFocoRoute,
   AuthenticatedGraphRoute: AuthenticatedGraphRoute,

@@ -6,7 +6,7 @@ Evoluir o EstudosPlus com IA de estudo, busca semântica, proficiência SRS, pla
 
 ## Onde o trabalho parou
 
-A Fase C (plano diário gerado por IA) foi implementada e publicada na `main`. A Fase D (sessão gamificada) ainda não foi iniciada; o próximo passo combinado é extrair o timer do `foco.tsx` e depois criar `/study/session`.
+A Fase D foi implementada localmente e está pronta para validação/commit: o relógio foi extraído de `foco.tsx` e a rota `/study/session?noteId=...` foi criada. Ainda não foi publicada nesta atualização de memória.
 
 ## Feito
 
@@ -16,6 +16,7 @@ A Fase C (plano diário gerado por IA) foi implementada e publicada na `main`. A
 - Jina embeddings + pgvector semântico adaptados para `content_cards`.
 - SRS `topic_proficiency`, RPCs e avaliação Acertei/Errei nos flashcards.
 - Fase C: `daily_plans`, geração idempotente e card básico no Dashboard.
+- Fase D local: hook `usePomodoroTimer`, reutilização em Foco e sessão gamificada com flashcards/SRS.
 - Commits publicados até `cf2f719`.
 
 ## Arquivos e áreas relevantes
@@ -26,6 +27,8 @@ A Fase C (plano diário gerado por IA) foi implementada e publicada na `main`. A
 - `src/lib/api/ai.functions.ts`, `embeddings.functions.ts`, `plans.functions.ts` — Server Functions.
 - `src/lib/study/proficiency.ts` — SRS.
 - `src/routes/_authenticated/foco.tsx` — Pomodoro atual, ainda acoplado à página.
+- `src/components/focus/usePomodoroTimer.ts` — relógio compartilhado extraído do Foco.
+- `src/routes/_authenticated/study.session.tsx` — sessão gamificada.
 - `src/components/focus/TimerRing.tsx` e `useFocusSettings.ts` — peças reutilizáveis do timer.
 - `src/routes/_authenticated/dashboard.tsx` — Dashboard e plano diário.
 - Notas reais ficam em `content_cards`; a rota de nota é `/subjects/$id?note=$noteId`.
@@ -41,10 +44,8 @@ A Fase C (plano diário gerado por IA) foi implementada e publicada na `main`. A
 
 ## Próximos passos
 
-1. Extrair a lógica de relógio do `foco.tsx` para hook/componente compartilhado, sem quebrar registro de `study_sessions`.
-2. Criar `/study/session?noteId=...`, reutilizando TimerRing, configurações Pomodoro, geração/cache de flashcards e `recordFlashcardAttempt`.
-3. Adicionar pausa ao revelar resposta, retomada após avaliação, modal de tempo esgotado e tela final.
-4. Depois implementar Fase E (análise de gaps para provas) usando `events`/`event_subjects` e adaptar a ausência de rota de detalhe de prova.
+1. Validar, commitar e publicar a Fase D.
+2. Depois implementar Fase E (análise de gaps para provas) usando `events`/`event_subjects` e adaptar a ausência de rota de detalhe de prova.
 
 ## Bloqueios ou hipóteses
 

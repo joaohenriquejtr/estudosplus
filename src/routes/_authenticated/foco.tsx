@@ -21,6 +21,7 @@ import {
   notify,
   type FocusMode,
 } from "@/components/focus/useFocusSettings";
+import { usePomodoroTimer } from "@/components/focus/usePomodoroTimer";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -55,18 +56,15 @@ function FocusPage() {
   const { settings, update } = useFocusSettings();
 
   const [mode, setMode] = useState<FocusMode>("focus");
-  const [startedAt, setStartedAt] = useState<number | null>(null);
-  const [elapsedBefore, setElapsedBefore] = useState(0);
-  const [tick, setTick] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [focusCount, setFocusCount] = useState(0);
   const [subjectId, setSubjectId] = useState<string>("none");
   const [chapterId, setChapterId] = useState<string>("none");
   const [note, setNote] = useState("");
-  const finishedRef = useRef(false);
 
   const durationMinutes = settings[mode];
   const total = durationMinutes * 60;
+  const onTimerCompleteRef = useRef<() => void>(() => undefined);
 
   const { data: subjects = [] } = useQuery({
     queryKey: ["subjects"],
@@ -93,17 +91,6 @@ function FocusPage() {
     },
   });
 
-  const running = startedAt !== null;
-  const elapsed = elapsedBefore + (running ? (Date.now() - startedAt) / 1000 : 0);
-  const remaining = Math.max(0, total - elapsed);
-
-  // Renderiza a cada segundo enquanto roda; o tempo em si vem do relógio.
-  useEffect(() => {
-    if (!running) return;
-    const id = setInterval(() => setTick((t) => t + 1), 500);
-    return () => clearInterval(id);
-  }, [running]);
-  void tick;
 
   const startSession = useMutation({
     mutationFn: async () => {
@@ -141,16 +128,20 @@ function FocusPage() {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["sessions"] }),
   });
 
+  const timer = usePomodoroTimer({
+    durationSeconds: total,
+    onComplete: () => onTimerCompleteRef.current(),
+  });
+  const { running, remaining } = timer;
+
   const reset = useCallback(() => {
-    setStartedAt(null);
-    setElapsedBefore(0);
+    timer.reset(total);
     setSessionId(null);
-    finishedRef.current = false;
-  }, []);
+  }, [timer.reset, total]);
 
   const conclude = useCallback(
     async (completed: boolean) => {
-      const spent = Math.round(elapsedBefore + (startedAt ? (Date.now() - startedAt) / 1000 : 0));
+      const spent = Math.round(timer.elapsed);
       if (sessionId) await finishSession.mutateAsync({ id: sessionId, duration_seconds: spent, completed });
       reset();
       if (mode === "focus" && completed) {
@@ -166,22 +157,18 @@ function FocusPage() {
         toast.info("Sessão encerrada e registrada.");
       }
     },
-    [elapsedBefore, startedAt, sessionId, finishSession, reset, mode, focusCount],
+    [timer.elapsed, sessionId, finishSession, reset, mode, focusCount],
   );
 
-  // Fim natural do timer.
-  useEffect(() => {
-    if (!running || remaining > 0 || finishedRef.current) return;
-    finishedRef.current = true;
+  onTimerCompleteRef.current = () => {
     if (settings.sound) playChime();
     notify(`${MODE_LABEL[mode]} concluído`, note.trim() || "Hora de trocar de ciclo.");
     void conclude(true);
-  }, [running, remaining, settings.sound, mode, note, conclude]);
+  };
 
   const toggle = async () => {
     if (running) {
-      setElapsedBefore(elapsedBefore + (Date.now() - startedAt!) / 1000);
-      setStartedAt(null);
+      timer.pause();
       return;
     }
     if (!sessionId) {
@@ -190,13 +177,12 @@ function FocusPage() {
       setSessionId(id);
       notify(`${MODE_LABEL[mode]} iniciado`, note.trim() || "Sessão em andamento.");
     }
-    finishedRef.current = false;
-    setStartedAt(Date.now());
+    timer.start();
   };
 
   const discard = async () => {
     if (sessionId) {
-      const spent = Math.round(elapsedBefore + (startedAt ? (Date.now() - startedAt) / 1000 : 0));
+      const spent = Math.round(timer.elapsed);
       await finishSession.mutateAsync({ id: sessionId, duration_seconds: spent, completed: false });
     }
     reset();
@@ -312,7 +298,7 @@ function FocusPage() {
         )}
 
         <div className="mt-6">
-          <TimerRing remaining={remaining} total={total} label={MODE_LABEL[mode]} running={running} />
+          <TimerRing remaining={remaining} total={timer.total} label={MODE_LABEL[mode]} running={running} />
         </div>
 
         <Tabs
@@ -338,7 +324,7 @@ function FocusPage() {
         <div className="mt-4 flex flex-wrap justify-center gap-2">
           <Button onClick={() => void toggle()} className="gap-2" disabled={startSession.isPending}>
             {running ? <Pause className="size-4" /> : <Play className="size-4" />}
-            {running ? "Pausar" : elapsedBefore > 0 ? "Continuar" : "Iniciar"}
+            {running ? "Pausar" : timer.elapsed > 0 ? "Continuar" : "Iniciar"}
           </Button>
           <Button variant="outline" onClick={() => void discard()} className="gap-2" disabled={!sessionId && !running}>
             <RotateCcw className="size-4" />

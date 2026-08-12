@@ -6,6 +6,11 @@
 - Registrado que Features 1–4, Groq/NVIDIA, Jina/pgvector e SRS já foram implementados.
 - Registrado o próximo passo: extrair o Pomodoro de `foco.tsx` e criar a rota de sessão gamificada.
 
+## 2026-08-12
+- Fase D implementada localmente: criado `src/components/focus/usePomodoroTimer.ts` e atualizado `foco.tsx` para reutilizá-lo.
+- Criada `src/routes/_authenticated/study.session.tsx` com Pomodoro, geração de flashcards, SRS, pausa ao revelar resposta e resumo final.
+- Aguardando verificação final, commit e push.
+
 ## 2026-08-10
 - Fase C publicada em `cf2f719`: migration/API de `daily_plans` e card de geração no Dashboard.
 - Fase D não foi iniciada para evitar deixar refatoração parcial do timer.
