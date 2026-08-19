@@ -1,8 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
+import { recordLearningEvent } from "./events";
 
 export async function recordFlashcardAttempt(noteId: string, acertou: boolean) {
   const { data, error } = await supabase.rpc("record_flashcard_attempt" as never, { p_note_id: noteId, p_correct: acertou } as never);
   if (error) throw error;
+  try {
+    await recordLearningEvent({ type: acertou ? "FLASHCARD_CORRECT" : "FLASHCARD_INCORRECT", noteId });
+  } catch (trackingError) {
+    console.warn("Learning event tracking failed", { type: acertou ? "FLASHCARD_CORRECT" : "FLASHCARD_INCORRECT", message: trackingError instanceof Error ? trackingError.message : "Unknown error" });
+  }
   return data;
 }
 

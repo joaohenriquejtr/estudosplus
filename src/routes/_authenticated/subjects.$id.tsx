@@ -21,6 +21,7 @@ import { fillNoteStub, generateNoteFlashcards, generateNoteSummary, type NoteFla
 import { getCachedResponse, hashPrompt, setCachedResponse, type StubReference } from "@/lib/ai/llm";
 import { getSemanticContext, syncContentCardEmbedding } from "@/lib/api/embeddings.functions";
 import { recordFlashcardAttempt } from "@/lib/study/proficiency";
+import { trackNoteViewed } from "@/lib/study/events";
 
 
 export const Route = createFileRoute("/_authenticated/subjects/$id")({
@@ -229,6 +230,11 @@ function SubjectVault() {
 
 
   const activeNote = cards.find((c) => c.id === activeId) ?? null;
+
+  useEffect(() => {
+    if (!activeNote) return;
+    trackNoteViewed(activeNote.id, activeNote.subject_id);
+  }, [activeNote?.id, activeNote?.subject_id]);
 
   const backlinks = useMemo(() => {
     if (!activeNote?.title) return [];

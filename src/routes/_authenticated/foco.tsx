@@ -22,6 +22,7 @@ import {
   type FocusMode,
 } from "@/components/focus/useFocusSettings";
 import { usePomodoroTimer } from "@/components/focus/usePomodoroTimer";
+import { recordLearningEvent } from "@/lib/study/events";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -143,6 +144,15 @@ function FocusPage() {
     async (completed: boolean) => {
       const spent = Math.round(timer.elapsed);
       if (sessionId) await finishSession.mutateAsync({ id: sessionId, duration_seconds: spent, completed });
+      if (completed && mode === "focus") {
+        void recordLearningEvent({
+          type: "STUDY_SESSION_COMPLETED",
+          subjectId: subjectId === "none" ? null : subjectId,
+          metadata: { durationSeconds: spent, source: "focus" },
+        }).catch((error) => {
+          console.warn("Learning event tracking failed", { type: "STUDY_SESSION_COMPLETED", message: error instanceof Error ? error.message : "Unknown error" });
+        });
+      }
       reset();
       if (mode === "focus" && completed) {
         const nextCount = focusCount + 1;
@@ -157,7 +167,7 @@ function FocusPage() {
         toast.info("Sessão encerrada e registrada.");
       }
     },
-    [timer.elapsed, sessionId, finishSession, reset, mode, focusCount],
+    [timer.elapsed, sessionId, finishSession, reset, mode, focusCount, subjectId],
   );
 
   onTimerCompleteRef.current = () => {

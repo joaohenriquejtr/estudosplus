@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { sendSocraticChatMessage } from "@/lib/api/ai.functions";
 import type { SocraticChatMessage } from "@/lib/ai/llm";
+import { recordLearningEvent } from "@/lib/study/events";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
@@ -71,6 +72,9 @@ export function SocraticChatSheet({ open, onOpenChange, noteId, title, content }
     onSuccess: ({ question, answer }) => {
       setMessages((current) => [...current, { role: "user", content: question }, { role: "assistant", content: answer }]);
       setDraft("");
+      void recordLearningEvent({ type: "SOCRATIC_SESSION", noteId, metadata: { turns: 1 } }).catch((error) => {
+        console.warn("Learning event tracking failed", { type: "SOCRATIC_SESSION", message: error instanceof Error ? error.message : "Unknown error" });
+      });
     },
     onError: (error: Error) => toast.error(error.message || "Não foi possível continuar a conversa."),
   });

@@ -13,6 +13,7 @@ import { generateNoteFlashcards, type NoteFlashcards } from "@/lib/api/ai.functi
 import { getCachedResponse, hashPrompt, setCachedResponse } from "@/lib/ai/llm";
 import { updateDailyPlan } from "@/lib/api/plans.functions";
 import { recordFlashcardAttempt } from "@/lib/study/proficiency";
+import { recordLearningEvent } from "@/lib/study/events";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/study/session")({
@@ -91,7 +92,17 @@ function StudySession() {
       setResults((currentResults) => [...currentResults, { correct, card: current }]);
       qc.invalidateQueries({ queryKey: ["proficiency", noteId] });
       timer.start();
-      if (cards && index >= cards.flashcards.length - 1) setFinished(true);
+      if (cards && index >= cards.flashcards.length - 1) {
+        setFinished(true);
+        void recordLearningEvent({
+          type: "STUDY_SESSION_COMPLETED",
+          noteId,
+          subjectId: note?.subject_id,
+          metadata: { cardsCompleted: cards.flashcards.length, correct: results.filter((result) => result.correct).length + (correct ? 1 : 0) },
+        }).catch((error) => {
+          console.warn("Learning event tracking failed", { type: "STUDY_SESSION_COMPLETED", message: error instanceof Error ? error.message : "Unknown error" });
+        });
+      }
       else { setIndex((currentIndex) => currentIndex + 1); setRevealed(false); }
     },
     onError: (error: Error) => toast.error(error.message || "Não foi possível registrar a resposta."),
