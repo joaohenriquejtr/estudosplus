@@ -4,7 +4,7 @@ import type { LLMRequest, LLMResponse } from "./llm";
 
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 const NVIDIA_ENDPOINT = "https://integrate.api.nvidia.com/v1/chat/completions";
-const GROQ_MODEL = "llama-3.3-70b-versatile";
+const GROQ_MODEL = "openai/gpt-oss-120b";
 // `deepseek-ai/deepseek-v4` is not an available NIM model identifier. The
 // Flash variant is the documented default for NVIDIA's chat-completions API.
 const NVIDIA_MODEL = "deepseek-ai/deepseek-v4-flash";
