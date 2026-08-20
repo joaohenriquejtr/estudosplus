@@ -1,0 +1,7 @@
+//#region src/stacks/supabase/paths.ts
+const FUNCTIONS_MOUNT_PREFIX = "/functions/v1/";
+function assertFunctionName(value, label = "functionName") {
+	if (!/^[a-zA-Z0-9_-]+$/.test(value)) throw new Error(`@lovable.dev/mcp-js: ${label} must be a single path segment matching [A-Za-z0-9_-], got ${JSON.stringify(value)}`);
+}
+//#endregion
+export { assertFunctionName as n, FUNCTIONS_MOUNT_PREFIX as t };
