@@ -30,6 +30,7 @@ export type PriorityWeights = {
   exerciseErrors: number;
   examProximity: number;
   missingDependencies: number;
+  emptyStub: number;
   missingConsolidation: number;
   lowStudyFrequency: number;
   missingReferenceBase: number;
@@ -45,6 +46,7 @@ export const DEFAULT_PRIORITY_WEIGHTS: PriorityWeights = {
   exerciseErrors: 16,
   examProximity: 26,
   missingDependencies: 10,
+  emptyStub: 14,
   missingConsolidation: 12,
   lowStudyFrequency: 8,
   missingReferenceBase: 6,
@@ -100,6 +102,7 @@ function reviewGapPoints(days: number | null, createdAt: string, weight: number,
 }
 
 function chooseAction(state: LearningState, signals: PrioritySignals, evidence: PriorityEvidence[]): StudyAction | null {
+  if (state.isStub) return "CONSTRUIR";
   if (state.consolidation.needsConsolidation) return "CONSOLIDAR";
   if ((state.flashcards.accuracyPercent ?? 100) < 70 || (signals.exerciseIncorrectAttempts ?? 0) > 0 || (signals.detectedDoubts ?? 0) > 0) return "RECUPERAR";
   if (state.flashcards.totalAttempts === 0 && evidence.some((item) => item.code === "exam_proximity")) return "PRATICAR";
@@ -157,6 +160,8 @@ export function scoreLearningState(
   const dependencyCount = Math.max(0, signals.missingDependencies ?? 0);
   const dependencyPoints = Math.min(weights.missingDependencies, dependencyCount * 3);
   if (dependencyPoints > 0) add("missing_dependencies", dependencyPoints, `${dependencyCount} dependência(s) ainda não desenvolvida(s).`);
+
+  if (state.isStub) add("empty_stub", weights.emptyStub, "Esta nota ainda está vazia e precisa de conteúdo inicial.");
 
   if (state.consolidation.needsConsolidation) add("missing_consolidation", weights.missingConsolidation, "A aula possui conteúdo, mas ainda não há um resumo relacionado.");
 

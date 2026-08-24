@@ -54,6 +54,16 @@ test("prioriza consolidação para aula sem resumo", () => {
   assert.ok(result.evidence.some((item) => item.code === "missing_consolidation"));
 });
 
+test("recomenda construir um stub vazio", () => {
+  const result = scoreLearningState(baseState({
+    isStub: true,
+    flashcards: { totalAttempts: 0, correctAttempts: 0, incorrectAttempts: 0, accuracyPercent: null, recentIncorrectAttempts: 0, lastAttemptAt: null },
+    daysSinceLastReview: null,
+  }), {}, undefined, new Date("2026-08-19T00:00:00.000Z"));
+  assert.equal(result.action, "CONSTRUIR");
+  assert.ok(result.evidence.some((item) => item.code === "empty_stub"));
+});
+
 test("prioriza referência ausente quando ela é recorrente e relacionada a prova", () => {
   const result = scoreMissingReference({ title: "Somatório", referenceCount: 5, relatedExamDays: 4, relatedExamRelevance: 1, inActiveStudyCycle: true });
   assert.equal(result.action, "CONSTRUIR");
