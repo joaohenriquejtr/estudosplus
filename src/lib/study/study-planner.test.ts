@@ -59,3 +59,13 @@ test("mostra estado honesto quando só há poucos dados", () => {
   assert.equal(plan.status, "limited_data");
   assert.equal(plan.items[0]?.estimatedMinutes, 20);
 });
+
+test("inclui conceito referenciado sem nota como tarefa de construir", () => {
+  const plan = buildStudyPlan([], { availableMinutes: 20 }, [{
+    candidate: { title: "Somatório", subjectId: "subject-1", referenceCount: 4, sourceNoteIds: ["a", "b"] },
+    priority: priority(30, "CONSTRUIR"),
+  }]);
+  assert.equal(plan.items[0]?.kind, "missing_reference");
+  assert.equal(plan.items[0]?.noteId, null);
+  assert.equal(plan.items[0]?.action, "CONSTRUIR");
+});
